@@ -1,0 +1,18 @@
+{
+    "name": "repoready-monorepo",
+    "private": true,
+    "workspaces": [
+        "packages/*"
+    ],
+    "scripts": {
+        "build": "npm run build --workspaces",
+        "dev": "npm run build -w @repoready/core && npm run dev -w @repoready/cli --",
+        "typecheck": "tsc -p tsconfig.base.json --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "tsup": "^8.0.0",
+        "tsx": "^4.0.0",
+        "typescript": "^5.0.0"
+    }
+}
