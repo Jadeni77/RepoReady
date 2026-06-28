@@ -26,6 +26,8 @@ export type RepoContext = {
     config: RepoReadyConfig;
     projectTypes: ProjectType[];
     has: (relativePath: string) => Promise<Boolean>;
+    listDir: (relativePath: string) => Promise<string[]>;
+    readText: (relativePath: string) => Promise<string | null>;
     readJson: <T = unknown>(relativePath: string) => Promise<T | null>;
 };
 
@@ -38,6 +40,7 @@ export type CheckResult = {
     recommendation?: string;
     pointsEarned: number;
     pointsPossible: number;
+    details?: Record<string, unknown>;
 }
 
 export type HealthCheck = {
@@ -45,17 +48,31 @@ export type HealthCheck = {
     name: string;
     category: CheckCategory;
     points: number;
+    shouldRun?: (ctx: RepoContext) => Promise<boolean> | boolean;
     run: (ctx: RepoContext) => Promise<CheckResult>;
+
+}
+
+export type CategoryScore = {
+    category: CheckCategory;
+    pointsEarned: number;
+    pointsPossible: number;
+    score: number;
 }
 
 export type DoctorOptions = {
     cwd?: string;
+    only?: string[];
+    skip?: string[];
 }
 
 export type DoctorResult = {
     root: string;
     score: number;
+    pointsEarned: number;
+    pointsPossible: number;
     detectedProjectTypes: ProjectType[];
+    categoryScores: CategoryScore[];
     results: CheckResult[];
     suggestions: string[];
 }

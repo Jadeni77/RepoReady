@@ -22,8 +22,19 @@ export function formatDoctorText(result: DoctorResult): string {
     const lines: string[] = [];
 
     lines.push(`RepoReady Score: ${result.score}/100`);
+    lines.push(`Points: ${result.pointsEarned}/${result.pointsPossible}`);
     lines.push(`Root: ${result.root}`);
     lines.push(`Detected: ${result.detectedProjectTypes.join(", ")}`);
+    lines.push("");
+
+    lines.push("Category Scores:");
+    for (const categoryScore of result.categoryScores) {
+        const label = CATEGORY_LABELS[categoryScore.category];
+        lines.push(
+            `   ${label}: ${categoryScore.score}/100 (${categoryScore.pointsEarned}/${categoryScore.pointsPossible})`
+        );
+    }
+
     lines.push("");
 
     const grouped = groupByCategory(result.results);

@@ -7,6 +7,7 @@
     "scripts": {
         "build": "npm run build --workspaces",
         "dev": "npm run build -w @repoready/core && npm run dev -w @repoready/cli --",
+        "doctor": "npm run dev -- doctor",
         "typecheck": "tsc -p tsconfig.base.json --noEmit"
     },
     "devDependencies": {

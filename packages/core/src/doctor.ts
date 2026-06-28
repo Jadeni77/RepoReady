@@ -1,16 +1,28 @@
 import { defaultChecks } from "./checks.js";
 import { createRepoContext } from "./scan.js";
-import { CheckResult, DoctorOptions, DoctorResult } from "./types.js";
+import { CategoryScore, CheckCategory, CheckResult, DoctorOptions, DoctorResult, HealthCheck } from "./types.js";
 
 export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResult> {
     const ctx = await createRepoContext(options.cwd);
-    const enabledChecks = defaultChecks.filter((check) => {
-        return ctx.config.checks?.[check.id] != false;
-    });
+
+    const checksToRun: HealthCheck[] = [];
+
+    for (const check of defaultChecks) {
+        const enabledConfig = ctx.config.checks?.[check.id] !== false;
+        if (!enabledConfig) continue;
+
+        const shouldRun = check.shouldRun ? await check.shouldRun(ctx) : true;
+        if (!shouldRun) continue;
+
+        if (options.only?.length && !matchesAny(check, options.only)) continue;
+        if (options.skip?.length && matchesAny(check, options.skip)) continue;
+
+        checksToRun.push(check);
+    }
 
     const results: CheckResult[] = [];
 
-    for (const check of enabledChecks) {
+    for (const check of checksToRun) {
         try {
             results.push(await check.run(ctx));
         } catch (error) {
@@ -35,7 +47,7 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
         (sum, check) => sum + check.pointsPossible, 0
     );
 
-    const score = pointsPossible === 0 ? 100 : Math.round((pointsEarned / pointsPossible) * 100);
+    const score = calculateScore(pointsEarned, pointsPossible);
 
     const suggestions = results
         .filter((check) => check.status != "pass")
@@ -45,8 +57,53 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
     return {
         root: ctx.root,
         score,
+        pointsEarned,
+        pointsPossible,
         detectedProjectTypes: ctx.projectTypes,
+        categoryScores: calculateCategoryScores(results),
         results,
         suggestions: Array.from(new Set(suggestions))
     };
+}
+
+function calculateScore(pointsEarned: number, pointsPossible: number): number {
+    if (pointsPossible === 0) return 100;
+    return Math.round((pointsEarned / pointsPossible) * 100);
+}
+
+function calculateCategoryScores(results: CheckResult[]): CategoryScore[] {
+    const categories = new Map<CheckCategory, { pointsEarned: number; pointsPossible: number}>();
+
+    for (const result of results) {
+        const current = categories.get(result.category) ?? {
+            pointsEarned: 0,
+            pointsPossible: 0
+        };
+
+        current.pointsEarned += result.pointsEarned;
+        current.pointsPossible += result.pointsPossible;
+
+        categories.set(result.category, current);
+    }
+
+    return Array.from(categories.entries()).map(([category, points]) => ({
+        category,
+        pointsEarned: points.pointsEarned,
+        pointsPossible: points.pointsPossible,
+        score: calculateScore(points.pointsEarned, points.pointsPossible)
+    }));
+}
+
+function matchesAny(check: HealthCheck, values: string[]): boolean {
+    return values.some((value) => matches(check, value));
+}
+
+function matches(check: HealthCheck, value: string): boolean {
+    const normalized = value.toLowerCase().trim();
+
+    return (
+        check.id.toLowerCase() === normalized ||
+        check.category.toLowerCase() === normalized ||
+        check.name.toLowerCase() === normalized
+    );
 }
