@@ -1,5 +1,5 @@
 import path from "node:path";
-import { fromRoot, pathExists, readJsonFile } from "./fs.js";
+import { fromRoot, listDirectory, pathExists, readJsonFile, readTextFile } from "./fs.js";
 import { loadConfig } from "./config.js";
 import type { ProjectType, RepoContext } from "./types.js";
 
@@ -10,6 +10,14 @@ export async function createRepoContext(cwd: string = process.cwd()): Promise<Re
     const has = async (relativePath: string): Promise<boolean> => {
         return pathExists(fromRoot(root, relativePath));
     };
+
+    const listDir = async (relativePath: string): Promise<string[]> => {
+        return listDirectory(fromRoot(root, relativePath));
+    }
+
+    const readText = async (relativePath: string): Promise<string | null> => {
+        return readTextFile(fromRoot(root, relativePath));
+    }
 
     const readJson = async <T = unknown>(relativePath: string): Promise<T | null> => {
         return readJsonFile<T>(fromRoot(root, relativePath));
@@ -22,6 +30,8 @@ export async function createRepoContext(cwd: string = process.cwd()): Promise<Re
         config,
         projectTypes,
         has,
+        listDir,
+        readText,
         readJson
     };
 }
