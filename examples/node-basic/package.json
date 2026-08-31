@@ -1,0 +1,14 @@
+{
+  "name": "node-basic",
+  "version": "1.0.0",
+  "description": "A deliberately bare Node project used to demo and test RepoReady.",
+  "type": "module",
+  "main": "src/index.js",
+  "author": "Example Author <author@example.com>",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "left-pad": "*"
+  }
+}
