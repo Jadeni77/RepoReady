@@ -8,12 +8,15 @@
         "build": "npm run build --workspaces",
         "dev": "npm run build -w @repoready/core && npm run dev -w @repoready/cli --",
         "doctor": "npm run dev -- doctor",
-        "typecheck": "tsc -p tsconfig.base.json --noEmit"
+        "typecheck": "tsc -p tsconfig.base.json --noEmit",
+        "test": "node --import tsx --test \"packages/*/test/*.test.ts\"",
+        "check": "npm run typecheck && npm test"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
         "tsup": "^8.0.0",
         "tsx": "^4.0.0",
-        "typescript": "^5.0.0"
+        "typescript": "^5.0.0",
+        "yaml": "^2.9.0"
     }
 }
