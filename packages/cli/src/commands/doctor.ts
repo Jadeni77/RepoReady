@@ -1,5 +1,6 @@
 import { formatDoctorJson, formatDoctorText, runDoctor } from "@repoready/core";
 import type { Command } from "commander";
+import { getDefaultCwd } from "../cwd.js";
 
 type DoctorCommandOptions = {
     cwd?: string,
@@ -14,7 +15,7 @@ export function registerDoctorCommand(program: Command): void {
         .command("doctor")
         .description("Scan a repository and report readiness issues.")
         .option("--cwd <path>", "Repository directory to scan.")
-        .option("--json", "Output machines-readable JSON.")
+        .option("--json", "Output machine-readable JSON.")
         .option(
             "--fail-under <score>",
             "Exit with code 1 if the score is below this number.",
@@ -32,7 +33,7 @@ export function registerDoctorCommand(program: Command): void {
         )
         .action(async (options: DoctorCommandOptions) => {
             const result = await runDoctor({
-                cwd: options.cwd ?? process.cwd(),
+                cwd: options.cwd ?? getDefaultCwd(),
                 only: options.only,
                 skip: options.skip
             });
