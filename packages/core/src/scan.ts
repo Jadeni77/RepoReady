@@ -32,7 +32,11 @@ export async function createRepoContext(cwd: string = process.cwd()): Promise<Re
         has,
         listDir,
         readText,
-        readJson
+        readJson,
+        // Placeholders until Task 3 replaces this file with real adapter
+        // resolution (see the language-adapters plan).
+        adapters: [],
+        detected: []
     };
 }
 
