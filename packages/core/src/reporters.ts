@@ -21,6 +21,7 @@ const CATEGORY_LABELS: Record<CheckCategory, string> = {
 
 const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
     node: "Node",
+    typescript: "TypeScript",
     python: "Python",
     go: "Go",
     rust: "Rust",

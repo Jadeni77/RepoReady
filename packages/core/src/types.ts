@@ -9,6 +9,7 @@ export type CheckCategory =
 
 export type ProjectType =
     | "node"
+    | "typescript"
     | "python"
     | "go"
     | "rust"
@@ -23,14 +24,48 @@ export type RepoReadyConfig = {
     author?: string;
 };
 
-export type RepoContext = {
+export type RepoFiles = {
     root: string;
-    config: RepoReadyConfig;
-    projectTypes: ProjectType[];
     has: (relativePath: string) => Promise<boolean>;
     listDir: (relativePath: string) => Promise<string[]>;
     readText: (relativePath: string) => Promise<string | null>;
     readJson: <T = unknown>(relativePath: string) => Promise<T | null>;
+};
+
+export type RepoContext = RepoFiles & {
+    config: RepoReadyConfig;
+    projectTypes: ProjectType[];
+    /** Every registered adapter, matched or not. */
+    adapters: LanguageAdapter[];
+    /** Adapters whose detect() returned true, highest priority first. */
+    detected: DetectedAdapter[];
+};
+
+export type DetectionResult = {
+    detected: boolean;
+    evidence?: string[];
+};
+
+export type DetectedAdapter = {
+    adapter: LanguageAdapter;
+    evidence: string[];
+};
+
+export type LanguageAdapter = {
+    id: string;
+    name: string;
+    /** Omitted for non-language adapters such as github. */
+    projectType?: ProjectType;
+    /** Higher wins when several adapters match. */
+    priority: number;
+    /** Project types this adapter hides from display, e.g. typescript over node. */
+    supersedes?: ProjectType[];
+    detect: (files: RepoFiles) => Promise<DetectionResult>;
+    checks?: HealthCheck[];
+    generators?: RepoGenerator[];
+    ciSteps?: string;
+    installCommand?: string;
+    testCommand?: string;
 };
 
 export type CheckResult = {
@@ -50,6 +85,8 @@ export type HealthCheck = {
     name: string;
     category: CheckCategory;
     points: number;
+    /** Generator ID that repairs this check, used by `repoready fix`. */
+    fixedBy?: string;
     shouldRun?: (ctx: RepoContext) => Promise<boolean> | boolean;
     run: (ctx: RepoContext) => Promise<CheckResult>;
 
@@ -66,6 +103,7 @@ export type DoctorOptions = {
     cwd?: string;
     only?: string[];
     skip?: string[];
+    adapters?: LanguageAdapter[];
 }
 
 export type DoctorResult = {
@@ -106,6 +144,7 @@ export type GeneratorOptions = {
     targetPath?: string;
     license?: LicenseId;
     author?: string;
+    adapters?: LanguageAdapter[];
 }
 
 export type GeneratorResult = {
@@ -167,6 +206,7 @@ export type DepIssue = {
 
 export type DepCheckOptions = {
     cwd?: string;
+    adapters?: LanguageAdapter[];
 }
 
 export type DepCheckResult = {
@@ -209,6 +249,7 @@ export type FixOptions = {
     author?: string;
     /** Generator IDs to apply. When omitted, every safe fix is applied. */
     select?: string[];
+    adapters?: LanguageAdapter[];
 }
 
 export type FixFileResult = GeneratorFileResult;
