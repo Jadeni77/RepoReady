@@ -48,3 +48,5 @@ temp/
 
 # Local release artifacts
 *.tgz
+
+docs/
