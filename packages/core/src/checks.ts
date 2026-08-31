@@ -151,7 +151,7 @@ const ciWorkflowCheck: HealthCheck = {
     points: 15,
 
     async run(ctx) {
-        const workflowFiles = await ctx.listDir("./github/workflows");
+        const workflowFiles = await ctx.listDir(".github/workflows");
         const yamlWorkflows = workflowFiles.filter(
             (file) => file.endsWith(".yml") || file.endsWith(".yaml")
         );
@@ -160,7 +160,7 @@ const ciWorkflowCheck: HealthCheck = {
             return makeResult(
                 ciWorkflowCheck,
                 "pass",
-                `Found ${yamlWorkflows.length} Github Actions workflow file(s).`,
+                `Found ${yamlWorkflows.length} GitHub Actions workflow file(s).`,
                 undefined,
                 undefined,
                 { workflows: yamlWorkflows }
@@ -179,7 +179,7 @@ const ciWorkflowCheck: HealthCheck = {
         return makeResult(
             ciWorkflowCheck,
             "fail",
-            "No Github Actions workflow directory found.",
+            "No GitHub Actions workflow directory found.",
             "Run repoready init-ci."
         );
     }
@@ -192,8 +192,8 @@ const envExampleCheck = makeFileCheck({
     points: 5,
     paths: [".env.example", ".env.sample"],
     missingStatus: "warn",
-    missingSummary: "No environemnt example file found.",
-    recommendation: "Add .env.example if the project uses environemnt variables."
+    missingSummary: "No environment example file found.",
+    recommendation: "Add .env.example if the project uses environment variables."
 })
 
 const testsCheck: HealthCheck = {
@@ -237,7 +237,7 @@ const testsCheck: HealthCheck = {
             testsCheck,
             "warn",
             "No test directory or test script found.",
-            "Add tests or run repoready generate-tests."
+            "Add a tests/ directory or a real test script to the dependency manifest."
         );
     }
 };
@@ -286,7 +286,7 @@ const lockfileCheck: HealthCheck = {
         return makeResult(
             lockfileCheck,
             "warn",
-            "No lockfile found",
+            "No lockfile found.",
             "Commit a lockfile for reproducible installs when appropriate."
         );
     }
