@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 import { runDoctor } from "../src/doctor.js";
 import { planFix, runFix } from "../src/fix.js";
+import type { LanguageAdapter } from "../src/types.js";
 import {
     TEST_ADAPTERS,
     makeTempRepo,
@@ -87,6 +88,54 @@ describe("planFix", () => {
         await planFix({ cwd: root, adapters: TEST_ADAPTERS });
 
         assert.equal(await repoFileExists(root, "README.md"), false);
+    });
+
+    it("proposes fixes for adapter checks that declare fixedBy", async () => {
+        const adapter: LanguageAdapter = {
+            id: "demo",
+            name: "Demo",
+            priority: 5,
+            detect: async () => ({ detected: true }),
+            checks: [
+                {
+                    id: "demo-doc",
+                    name: "Demo Doc",
+                    category: "community",
+                    points: 5,
+                    fixedBy: "demo-doc",
+                    run: async (ctx) => ({
+                        id: "demo-doc",
+                        name: "Demo Doc",
+                        category: "community",
+                        status: (await ctx.has("DEMO.md")) ? "pass" : "fail",
+                        summary: "demo",
+                        pointsEarned: 0,
+                        pointsPossible: 5
+                    })
+                }
+            ],
+            generators: [
+                {
+                    id: "demo-doc",
+                    name: "Demo Doc Generator",
+                    category: "community",
+                    description: "Writes DEMO.md",
+                    generate: async () => [{ path: "DEMO.md", content: "# Demo\n" }]
+                }
+            ]
+        };
+
+        const root = await temp({});
+        const plan = await planFix({ cwd: root, adapters: [adapter] });
+
+        assert.ok(plan.items.some((item) => item.generatorId === "demo-doc"));
+    });
+
+    it("ignores failing checks with no fixedBy", async () => {
+        const plan = await planFix({ cwd: await temp({}), adapters: TEST_ADAPTERS });
+
+        // The tests check has no generator behind it and must not be proposed.
+        assert.equal(plan.items.find((item) => item.checkId === "tests"), undefined);
     });
 });
 

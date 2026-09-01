@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
 import { runDoctor } from "../src/doctor.js";
+import type { LanguageAdapter } from "../src/types.js";
 import {
     NODE_EXAMPLE,
     PERFECT_REPO,
@@ -9,6 +10,41 @@ import {
     makeTempRepo,
     removeTempRepo
 } from "./helpers.js";
+
+/**
+ * Minimal adapters used only to prove that doctor collects checks from
+ * detected adapters and skips them for adapters that did not match.
+ */
+const demoAdapter: LanguageAdapter = {
+    id: "demo",
+    name: "Demo",
+    priority: 5,
+    detect: async () => ({ detected: true }),
+    checks: [
+        {
+            id: "demo-check",
+            name: "Demo Check",
+            category: "community",
+            points: 5,
+            run: async () => ({
+                id: "demo-check",
+                name: "Demo Check",
+                category: "community",
+                status: "pass",
+                summary: "demo always passes",
+                pointsEarned: 5,
+                pointsPossible: 5
+            })
+        }
+    ]
+};
+
+const undetectedDemoAdapter: LanguageAdapter = {
+    ...demoAdapter,
+    id: "undetected-demo",
+    name: "Undetected Demo",
+    detect: async () => ({ detected: false })
+};
 
 describe("runDoctor", () => {
     const tempRepos: string[] = [];
@@ -238,5 +274,23 @@ describe("runDoctor", () => {
         const result = await runDoctor({ cwd: await temp({}), adapters: TEST_ADAPTERS });
 
         assert.equal(new Set(result.suggestions).size, result.suggestions.length);
+    });
+
+    it("runs checks contributed by a detected adapter", async () => {
+        const result = await runDoctor({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: [...TEST_ADAPTERS, demoAdapter]
+        });
+
+        assert.ok(result.results.some((check) => check.id === "demo-check"));
+    });
+
+    it("skips checks from an adapter that did not match", async () => {
+        const result = await runDoctor({
+            cwd: await temp({ "notes.txt": "" }),
+            adapters: [...TEST_ADAPTERS, undetectedDemoAdapter]
+        });
+
+        assert.equal(result.results.find((check) => check.id === "demo-check"), undefined);
     });
 });

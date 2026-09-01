@@ -43,12 +43,14 @@ function makeFileCheck(input: {
     missingStatus?: "warn" | "fail";
     missingSummary: string;
     recommendation?: string;
+    fixedBy?: string;
 }): HealthCheck {
     const check: HealthCheck = {
         id: input.id,
         name: input.name,
         category: input.category,
         points: input.points,
+        fixedBy: input.fixedBy,
 
         async run(ctx) {
           const found = await hasAny(ctx, input.paths);
@@ -86,7 +88,8 @@ const readmeCheck = makeFileCheck({
     paths: ["README.md", "readme.md", "README"],
     missingStatus: "fail",
     missingSummary: "No README file found.",
-    recommendation: "Run repoready init-readme."
+    recommendation: "Run repoready init-readme.",
+    fixedBy: "readme"
 });
 
 const licenseCheck = makeFileCheck({
@@ -97,7 +100,8 @@ const licenseCheck = makeFileCheck({
     paths: ["LICENSE", "LICENSE.md", "license.md"],
     missingStatus: "fail",
     missingSummary: "No license file found.",
-    recommendation: "Run repoready init-license."
+    recommendation: "Run repoready init-license.",
+    fixedBy: "license"
 })
 
 const contributingCheck = makeFileCheck({
@@ -108,7 +112,8 @@ const contributingCheck = makeFileCheck({
     paths: ["CONTRIBUTING.md", ".github/CONTRIBUTING.md"],
     missingStatus: "fail",
     missingSummary: "No contributing guide found.",
-    recommendation: "Run repoready init-contributing."
+    recommendation: "Run repoready init-contributing.",
+    fixedBy: "contributing"
 })
 
 const codeOfConductCheck = makeFileCheck({
@@ -119,7 +124,8 @@ const codeOfConductCheck = makeFileCheck({
     paths: ["CODE_OF_CONDUCT.md", ".github/CODE_OF_CONDUCT.md"],
     missingStatus: "warn",
     missingSummary: "No code of conduct found.",
-    recommendation: "Run repoready init-code-of-conduct."
+    recommendation: "Run repoready init-code-of-conduct.",
+    fixedBy: "code-of-conduct"
 })
 
 const issueTemplateCheck = makeFileCheck({
@@ -130,7 +136,8 @@ const issueTemplateCheck = makeFileCheck({
     paths: [".github/ISSUE_TEMPLATE.md", ".github/ISSUE_TEMPLATE"],
     missingStatus: "warn",
     missingSummary: "No issue template found.",
-    recommendation: "Run repoready init-issues."
+    recommendation: "Run repoready init-issues.",
+    fixedBy: "issues"
 })
 
 const pullRequestCheck = makeFileCheck({
@@ -141,7 +148,8 @@ const pullRequestCheck = makeFileCheck({
     paths: [".github/PULL_REQUEST_TEMPLATE.md", "PULL_REQUEST_TEMPLATE.md"],
     missingStatus: "warn",
     missingSummary: "No pull request template found.",
-    recommendation: "Run repoready init-pr-template."
+    recommendation: "Run repoready init-pr-template.",
+    fixedBy: "pr-template"
 })
 
 const ciWorkflowCheck: HealthCheck = {
@@ -149,6 +157,7 @@ const ciWorkflowCheck: HealthCheck = {
     name: "CI Workflow",
     category: "automation",
     points: 15,
+    fixedBy: "ci",
 
     async run(ctx) {
         const workflowFiles = await ctx.listDir(".github/workflows");
