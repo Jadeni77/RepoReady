@@ -1,0 +1,13 @@
+{
+  "name": "typescript-basic",
+  "version": "1.0.0",
+  "description": "A deliberately bare TypeScript project used to demo and test RepoReady.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
