@@ -2,6 +2,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { builtinAdapters } from "../src/builtin-adapters.js";
+import type { LanguageAdapter } from "../src/types.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,3 +66,67 @@ export const PERFECT_REPO: Record<string, string> = {
     "package-lock.json": "{}",
     ".gitignore": ".env\n"
 };
+
+/**
+ * Minimal stand-ins for the adapters that live in plugin packages. Core must
+ * not depend on its plugins, so its tests declare what they need locally.
+ */
+export const testNodeAdapter: LanguageAdapter = {
+    id: "node",
+    name: "Node",
+    projectType: "node",
+    priority: 10,
+    detect: async (files) =>
+        (await files.has("package.json"))
+            ? { detected: true, evidence: ["package.json"] }
+            : { detected: false },
+    installCommand: "npm install",
+    testCommand: "npm test",
+    ciSteps: `      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+`
+};
+
+export const testPythonAdapter: LanguageAdapter = {
+    id: "python",
+    name: "Python",
+    projectType: "python",
+    priority: 10,
+    detect: async (files) => {
+        for (const marker of ["pyproject.toml", "requirements.txt", "setup.py"]) {
+            if (await files.has(marker)) return { detected: true, evidence: [marker] };
+        }
+        return { detected: false };
+    },
+    installCommand: "pip install -r requirements.txt",
+    testCommand: "pytest",
+    ciSteps: `      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run tests
+        run: pytest
+`
+};
+
+export const TEST_ADAPTERS: LanguageAdapter[] = [
+    testNodeAdapter,
+    testPythonAdapter,
+    ...builtinAdapters
+];

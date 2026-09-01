@@ -1,69 +1,38 @@
 import path from "node:path";
-import { fromRoot, listDirectory, pathExists, readJsonFile, readTextFile } from "./fs.js";
+import { projectTypesFrom, resolveAdapters } from "./adapters.js";
 import { loadConfig } from "./config.js";
-import type { ProjectType, RepoContext } from "./types.js";
+import { fromRoot, listDirectory, pathExists, readJsonFile, readTextFile } from "./fs.js";
+import type { LanguageAdapter, RepoContext, RepoFiles } from "./types.js";
 
-export async function createRepoContext(cwd: string = process.cwd()): Promise<RepoContext> {
+export type RepoContextOptions = {
+    adapters?: LanguageAdapter[];
+};
+
+export async function createRepoContext(
+    cwd: string = process.cwd(),
+    options: RepoContextOptions = {}
+): Promise<RepoContext> {
     const root = path.resolve(cwd);
-    const config = await loadConfig(root);
+    const adapters = options.adapters ?? [];
 
-    const has = async (relativePath: string): Promise<boolean> => {
-        return pathExists(fromRoot(root, relativePath));
+    const files: RepoFiles = {
+        root,
+        has: (relativePath) => pathExists(fromRoot(root, relativePath)),
+        listDir: (relativePath) => listDirectory(fromRoot(root, relativePath)),
+        readText: (relativePath) => readTextFile(fromRoot(root, relativePath)),
+        readJson: <T>(relativePath: string) => readJsonFile<T>(fromRoot(root, relativePath))
     };
 
-    const listDir = async (relativePath: string): Promise<string[]> => {
-        return listDirectory(fromRoot(root, relativePath));
-    }
-
-    const readText = async (relativePath: string): Promise<string | null> => {
-        return readTextFile(fromRoot(root, relativePath));
-    }
-
-    const readJson = async <T = unknown>(relativePath: string): Promise<T | null> => {
-        return readJsonFile<T>(fromRoot(root, relativePath));
-    };
-
-    const projectTypes = await detectProjectTypes(has);
+    const [config, detected] = await Promise.all([
+        loadConfig(root),
+        resolveAdapters(files, adapters)
+    ]);
 
     return {
-        root,
+        ...files,
         config,
-        projectTypes,
-        has,
-        listDir,
-        readText,
-        readJson,
-        // Placeholders until Task 3 replaces this file with real adapter
-        // resolution (see the language-adapters plan).
-        adapters: [],
-        detected: []
+        projectTypes: projectTypesFrom(detected),
+        adapters,
+        detected
     };
-}
-
-async function detectProjectTypes(has: (relativePath: string) => Promise<boolean>): Promise<ProjectType[]> {
-    const detected: ProjectType[] = [];
-
-    if (await has("package.json")) detected.push("node");
-
-    if (
-        (await has("pyproject.toml")) ||
-        (await has("requirements.txt")) ||
-        (await has("setup.py"))
-    ) {
-        detected.push("python");
-    }
-
-    if (await has("go.mod")) detected.push("go");
-
-    if (await has("Cargo.toml")) detected.push("rust");
-
-    if ((await has("pom.xml")) || (await has("build.gradle"))) {
-        detected.push("java");
-    }
-
-    if (await has("Gemfile")) detected.push("ruby");
-
-    if (await has("composer.json")) detected.push("php");
-
-    return detected.length > 0 ? detected : ["generic"];
 }
