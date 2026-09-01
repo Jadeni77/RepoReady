@@ -1,3 +1,4 @@
+import { displayProjectTypes } from "./adapters.js";
 import { createRepoContext } from "./scan.js";
 import type {
     DepCheckOptions,
@@ -69,6 +70,7 @@ export async function checkDependencies(options: DepCheckOptions = {}): Promise<
         return {
             root: ctx.root,
             detectedProjectTypes: ctx.projectTypes,
+            displayProjectTypes: displayProjectTypes(ctx.detected),
             manifests,
             lockfiles,
             updateTools,
@@ -122,6 +124,7 @@ export async function checkDependencies(options: DepCheckOptions = {}): Promise<
     return {
         root: ctx.root,
         detectedProjectTypes: ctx.projectTypes,
+        displayProjectTypes: displayProjectTypes(ctx.detected),
         manifests,
         lockfiles,
         updateTools,

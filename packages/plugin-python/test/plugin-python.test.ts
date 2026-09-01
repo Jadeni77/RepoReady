@@ -3,10 +3,15 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
-import { createRepoContext } from "@repoready/core";
+import { ciGenerator, createRepoContext } from "@repoready/core";
 import type { RepoFiles } from "@repoready/core";
 import { pythonAdapter } from "../src/index.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(here, "../../..");
+const PYTHON_EXAMPLE = path.join(REPO_ROOT, "examples/python-basic");
 
 const temps: string[] = [];
 after(async () => {
@@ -73,6 +78,72 @@ describe("pythonAdapter", () => {
         assert.equal(setup.with["python-version"], "3.12");
         assert.match(pythonAdapter.ciSteps!, /pip install -r requirements\.txt/);
         assert.doesNotMatch(pythonAdapter.ciSteps!, /pip-install/);
+    });
+});
+
+describe("ciGenerator auto-detection", () => {
+    // Restores coverage deleted alongside the switch-based language handling
+    // in generators.ts: with lang "auto", ciGenerator must resolve the
+    // Python example to the Python adapter's CI steps rather than the
+    // generic fallback.
+    it("selects setup-python for the Python example", async () => {
+        const ctx = await createRepoContext(PYTHON_EXAMPLE, { adapters: [pythonAdapter] });
+        const files = await ciGenerator.generate(ctx, { lang: "auto" });
+        const workflow = parseYaml(files[0]!.content) as any;
+
+        assert.ok(
+            workflow.jobs.test.steps.some((step: any) =>
+                String(step.uses ?? "").startsWith("actions/setup-python")
+            )
+        );
+    });
+});
+
+describe("pythonAdapter ciSteps shape", () => {
+    // Mirrors the guards in packages/core/test/builtin-adapters.test.ts.
+    // Without them, a mis-indented ciSteps fragment can pass every other
+    // test here while breaking the real workflow written by `init-ci`.
+    it("indents every ciSteps line by at least six spaces", () => {
+        // A block sequence at 4 spaces still parses as valid YAML when it
+        // sits at the same indent as its parent mapping key ("steps:"), but
+        // breaks the real workflow template in generators.ts, which nests
+        // steps six spaces under a four-space `steps:` key.
+        const lines = pythonAdapter.ciSteps!.split("\n");
+
+        for (const line of lines) {
+            if (line.trim() === "") continue;
+
+            const leadingSpaces = line.match(/^ */)![0].length;
+
+            assert.ok(
+                leadingSpaces >= 6,
+                `pythonAdapter ciSteps has a line indented only ${leadingSpaces} spaces: ${JSON.stringify(line)}`
+            );
+        }
+    });
+
+    it("produces steps that parse as YAML inside a workflow", () => {
+        // Mirrors the real shape from buildCiWorkflow() in generators.ts: a
+        // preceding six-space "- name: Checkout" step under the same `steps:`
+        // key. A ciSteps string re-indented to four spaces parses fine against
+        // a bare `steps:\n` wrapper (YAML allows a block sequence at its
+        // parent's indent), but throws here, the way it would in production.
+        const workflow = parseYaml(`jobs:
+  test:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+${pythonAdapter.ciSteps}`) as Record<string, any>;
+
+        const steps = workflow.jobs.test.steps;
+
+        assert.ok(Array.isArray(steps) && steps.length > 1, "pythonAdapter produced no steps");
+
+        for (const step of steps) {
+            assert.ok(step.name, "pythonAdapter has an unnamed step");
+            assert.ok(step.uses || step.run, `pythonAdapter step "${step.name}" does nothing`);
+        }
     });
 });
 

@@ -6,7 +6,6 @@ import {
     codeOfConductGenerator,
     contributingGenerator,
     defaultGenerators,
-    getGenerator,
     issueTemplateGenerator,
     licenseGenerator,
     pullRequestTemplateGenerator,
@@ -66,14 +65,6 @@ describe("the generator registry", () => {
         assert.equal(new Set(ids).size, ids.length);
     });
 
-    it("looks generators up by ID", () => {
-        assert.equal(getGenerator("readme"), readmeGenerator);
-        assert.equal(getGenerator("license"), licenseGenerator);
-        assert.equal(getGenerator("code-of-conduct"), codeOfConductGenerator);
-        assert.equal(getGenerator("pr-template"), pullRequestTemplateGenerator);
-        assert.equal(getGenerator("nope"), null);
-    });
-
     it("covers every generator the default checks recommend", async () => {
         const { defaultChecks } = await import("../src/checks.js");
         const ctx = await createRepoContext(await temp({}), { adapters: TEST_ADAPTERS });
@@ -89,10 +80,11 @@ describe("the generator registry", () => {
         for (const checkId of recommended) {
             const result = await defaultChecks.find((c) => c.id === checkId)!.run(ctx);
             const command = result.recommendation?.match(/repoready (init-[\w-]+)/)?.[1];
+            const generatorId = command?.replace("init-", "");
 
             assert.ok(command, `check ${checkId} did not recommend an init command`);
             assert.ok(
-                getGenerator(command.replace("init-", "")),
+                defaultGenerators.some((generator) => generator.id === generatorId),
                 `no generator backs "repoready ${command}"`
             );
         }

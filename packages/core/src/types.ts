@@ -214,7 +214,10 @@ export type DepCheckOptions = {
 
 export type DepCheckResult = {
     root: string;
+    /** Every detected project type, unfiltered. TypeScript repos keep "node" here. */
     detectedProjectTypes: ProjectType[];
+    /** Detected project types with superseded ones (e.g. "node" under "typescript") hidden, for human display. */
+    displayProjectTypes: ProjectType[];
     manifests: string[];
     lockfiles: string[];
     /** Config files for automated update tools (Dependabot, Renovate). */
