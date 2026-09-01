@@ -51,7 +51,7 @@ export function formatDoctorText(result: DoctorResult): string {
     lines.push(`RepoReady Score: ${result.score}/100`);
     lines.push(`Points: ${result.pointsEarned}/${result.pointsPossible}`);
     lines.push(`Root: ${result.root}`);
-    lines.push(`Detected project type: ${formatProjectTypes(result.detectedProjectTypes)}`);
+    lines.push(`Detected project type: ${formatProjectTypes(result.displayProjectTypes)}`);
     lines.push("");
 
     lines.push("Category Scores:");

@@ -1,5 +1,6 @@
 import { formatDoctorJson, formatDoctorText, runDoctor } from "@repoready/core";
 import type { Command } from "commander";
+import { defaultAdapters } from "../adapters.js";
 import { getDefaultCwd } from "../cwd.js";
 
 type DoctorCommandOptions = {
@@ -35,7 +36,8 @@ export function registerDoctorCommand(program: Command): void {
             const result = await runDoctor({
                 cwd: options.cwd ?? getDefaultCwd(),
                 only: options.only,
-                skip: options.skip
+                skip: options.skip,
+                adapters: defaultAdapters
             });
 
             const output = options.json

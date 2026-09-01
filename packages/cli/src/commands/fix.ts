@@ -12,6 +12,7 @@ import {
 import type { Command } from "commander";
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
+import { defaultAdapters } from "../adapters.js";
 import { getDefaultCwd } from "../cwd.js";
 
 type FixCommandOptions = {
@@ -47,7 +48,8 @@ export function registerFixCommand(program: Command): void {
                 yes: Boolean(options.yes),
                 lang: options.lang ?? "auto",
                 license: options.license,
-                author: options.author
+                author: options.author,
+                adapters: defaultAdapters
             };
 
             if (options.interactive && !options.dryRun) {

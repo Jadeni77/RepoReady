@@ -7,3 +7,5 @@ export * from "./licenses.js";
 export * from "./reporters.js";
 export * from "./generator-runner.js";
 export * from "./generators.js";
+export * from "./builtin-adapters.js";
+export * from "./adapters.js";

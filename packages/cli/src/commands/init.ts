@@ -18,9 +18,10 @@ import {
 import type { Command } from "commander";
 import { stat } from "node:fs/promises";
 import path from "node:path";
+import { defaultAdapters } from "../adapters.js";
 import { getDefaultCwd } from "../cwd.js";
 
-type InitCommandOptions = {
+export type InitCommandOptions = {
     cwd?: string;
     dryRun?: boolean;
     force?: boolean;
@@ -32,7 +33,7 @@ type InitCommandOptions = {
 };
 
 /** Every init-* command shares the same write-safety flags. */
-function withCommonOptions(command: Command): Command {
+export function withCommonOptions(command: Command): Command {
     return command
         .option("--cwd <path>", "Repository directory to update.")
         .option("--dry-run", "Preview generated files without writing them.")
@@ -111,15 +112,14 @@ export function registerInitCommands(program: Command): void {
             .description("Generate a GitHub Actions CI workflow.")
             .option(
                 "--lang <lang>",
-                "CI language template: auto, node, python, go, rust, java, ruby, php, generic.",
-                parseLanguage
+                "CI language template: auto, or any detected language."
             )
     ).action(async (options: InitCommandOptions) => {
         await runAndPrint(ciGenerator, options);
     });
 }
 
-async function runAndPrint(
+export async function runAndPrint(
     generator: RepoGenerator,
     options: InitCommandOptions
 ): Promise<void> {
@@ -131,7 +131,8 @@ async function runAndPrint(
         lang: options.lang ?? "auto",
         license: options.license,
         author: options.author,
-        targetPath: options.targetPath
+        targetPath: options.targetPath,
+        adapters: defaultAdapters
     } satisfies GeneratorOptions);
 
     console.log(formatGeneratorText(result));
@@ -195,30 +196,6 @@ function looksLikeReadmeFile(filePath: string): boolean {
         extension === ".md" ||
         extension === ".mdx"
     );
-}
-
-function parseLanguage(value: string): ProjectType | "auto" {
-    const normalized = value.toLowerCase();
-
-    const allowed = [
-        "auto",
-        "node",
-        "python",
-        "go",
-        "rust",
-        "java",
-        "ruby",
-        "php",
-        "generic"
-    ];
-
-    if (!allowed.includes(normalized)) {
-        throw new Error(
-            "--lang must be one of: auto, node, python, go, rust, java, ruby, php, generic."
-        );
-    }
-
-    return normalized as ProjectType | "auto";
 }
 
 function parseLicense(value: string): LicenseId {
