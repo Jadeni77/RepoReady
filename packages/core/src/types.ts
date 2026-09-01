@@ -66,6 +66,11 @@ export type LanguageAdapter = {
     ciSteps?: string;
     installCommand?: string;
     testCommand?: string;
+    /**
+     * Dependabot's `package-ecosystem` value for this language, e.g. "npm" or
+     * "pip". Omitted when Dependabot has no ecosystem for it.
+     */
+    dependabotEcosystem?: string;
 };
 
 export type CheckResult = {

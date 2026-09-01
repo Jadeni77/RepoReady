@@ -13,6 +13,7 @@ export const nodeAdapter: LanguageAdapter = {
     checks: [nodeEnginesCheck, nodePublishFilesCheck],
     installCommand: "npm install",
     testCommand: "npm test",
+    dependabotEcosystem: "npm",
     ciSteps: `      - name: Setup Node
         uses: actions/setup-node@v4
         with:
