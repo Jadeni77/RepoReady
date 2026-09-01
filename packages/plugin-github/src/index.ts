@@ -1,6 +1,11 @@
 import type { LanguageAdapter } from "@repoready/core";
 import { securityPolicyCheck } from "./checks.js";
-import { securityGenerator } from "./generators.js";
+import {
+    dependabotGenerator,
+    releaseGenerator,
+    scorecardGenerator,
+    securityGenerator
+} from "./generators.js";
 
 /**
  * Universal GitHub repository hygiene. It has no projectType and no ciSteps,
@@ -13,7 +18,12 @@ export const githubAdapter: LanguageAdapter = {
     priority: 0,
     detect: async () => ({ detected: true }),
     checks: [securityPolicyCheck],
-    generators: [securityGenerator]
+    generators: [
+        securityGenerator,
+        dependabotGenerator,
+        scorecardGenerator,
+        releaseGenerator
+    ]
 };
 
 export * from "./checks.js";

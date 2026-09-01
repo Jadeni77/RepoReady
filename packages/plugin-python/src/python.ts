@@ -17,6 +17,7 @@ export const pythonAdapter: LanguageAdapter = {
     checks: [pythonPyprojectCheck, pythonLintConfigCheck],
     installCommand: "pip install -r requirements.txt",
     testCommand: "pytest",
+    dependabotEcosystem: "pip",
     ciSteps: `      - name: Setup Python
         uses: actions/setup-python@v5
         with:

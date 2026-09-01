@@ -20,6 +20,7 @@ export const goAdapter: LanguageAdapter = {
     detect: markerDetect(["go.mod"]),
     installCommand: "go mod download",
     testCommand: "go test ./...",
+    dependabotEcosystem: "gomod",
     ciSteps: `      - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -38,6 +39,7 @@ export const rustAdapter: LanguageAdapter = {
     detect: markerDetect(["Cargo.toml"]),
     installCommand: "cargo build",
     testCommand: "cargo test",
+    dependabotEcosystem: "cargo",
     ciSteps: `      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -54,6 +56,7 @@ export const javaAdapter: LanguageAdapter = {
     detect: markerDetect(["pom.xml", "build.gradle"]),
     installCommand: "mvn --batch-mode install",
     testCommand: "mvn --batch-mode test",
+    dependabotEcosystem: "maven",
     ciSteps: `      - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -73,6 +76,7 @@ export const rubyAdapter: LanguageAdapter = {
     detect: markerDetect(["Gemfile"]),
     installCommand: "bundle install",
     testCommand: "bundle exec rspec",
+    dependabotEcosystem: "bundler",
     ciSteps: `      - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -91,6 +95,7 @@ export const phpAdapter: LanguageAdapter = {
     detect: markerDetect(["composer.json"]),
     installCommand: "composer install",
     testCommand: "composer test",
+    dependabotEcosystem: "composer",
     ciSteps: `      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:

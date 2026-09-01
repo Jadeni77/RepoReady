@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { registerCheckDepsCommand } from "./commands/check-deps.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
+import { registerExternalToolCommands } from "./commands/external-tools.js";
 import { registerFixCommand } from "./commands/fix.js";
 import { registerInitCommands } from "./commands/init.js";
 import { registerSecurityCommand } from "./commands/security.js";
@@ -19,6 +20,7 @@ registerFixCommand(program);
 registerCheckDepsCommand(program);
 registerInitCommands(program);
 registerSecurityCommand(program);
+registerExternalToolCommands(program);
 
 program.parseAsync(process.argv).catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error);

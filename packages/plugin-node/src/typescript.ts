@@ -41,6 +41,7 @@ export const typescriptAdapter: LanguageAdapter = {
     checks: [tsStrictCheck],
     installCommand: "npm install",
     testCommand: "npm test",
+    dependabotEcosystem: "npm",
     ciSteps: `      - name: Setup Node
         uses: actions/setup-node@v4
         with:

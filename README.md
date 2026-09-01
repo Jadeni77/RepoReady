@@ -9,13 +9,13 @@ you.
 
 ```
 $ repoready doctor
-RepoReady Score: 34/100
+RepoReady Score: 29/100
 ...
 $ repoready fix --yes
-Applied 8 file(s)
+Applied 9 file(s)
 
 $ repoready doctor
-RepoReady Score: 86/100
+RepoReady Score: 83/100
 ```
 
 ## Quick start
@@ -25,11 +25,36 @@ RepoReady Score: 86/100
 npm install
 npm run build
 
-# scan the current directory
-node packages/cli/dist/index.js doctor
+# then, from anywhere inside the repo
+npx repoready doctor
+npx repoready doctor --cwd /path/to/some/other/repo
 ```
 
-Or run it straight from source during development (no build step):
+`npm install` creates `node_modules/.bin/repoready` from the CLI package's
+`bin` field, so `npx repoready` runs your local build — no publish step and no
+global install. Point it at any directory with `--cwd`.
+
+To get a bare `repoready` on your `PATH` (usable outside this repo without
+`npx`), link the CLI package:
+
+```bash
+npm link -w @repoready/cli
+```
+
+That writes into npm's global prefix, which on a default macOS install is
+`/usr/local` and needs `sudo`. To avoid that, point npm at a directory you own
+first:
+
+```bash
+npm config set prefix ~/.npm-global
+export PATH="$HOME/.npm-global/bin:$PATH"   # add to your shell profile
+npm link -w @repoready/cli
+```
+
+Undo with `npm unlink -g @repoready/cli`. Either way `repoready` runs the build
+in your working tree, so re-run `npm run build` after changing source.
+
+To run straight from source with no build step:
 
 ```bash
 npm run dev -w @repoready/cli -- doctor
@@ -50,6 +75,9 @@ npm run dev -w @repoready/cli -- doctor
 | `repoready init-pr-template` | Generate a GitHub pull request template. |
 | `repoready init-ci` | Generate a GitHub Actions CI workflow. |
 | `repoready init-security` | Generate a `SECURITY.md` file. |
+| `repoready init-dependabot` | Generate a Dependabot config for the detected ecosystems. |
+| `repoready init-scorecard` | Generate an OpenSSF Scorecard workflow. |
+| `repoready init-release` | Generate a release-please workflow and config. |
 
 Every command accepts `--cwd <path>` to target a directory other than the
 current one.
@@ -151,6 +179,31 @@ otherwise falls back to `package.json`, then `git config user.name`.
 `typescript`, `node`, `python`, `go`, `rust`, `java`, `ruby`, `php`,
 `generic`) and detects the language from the repo by default.
 
+### External tool config
+
+RepoReady writes config for established tools rather than reimplementing them,
+and makes no network calls of its own.
+
+`init-dependabot` reads the `package-ecosystem` for each detected language off
+its adapter — `npm`, `pip`, `gomod`, `cargo`, `maven`, `bundler`, `composer` —
+and always adds a `github-actions` entry so workflow actions stay updated too.
+A TypeScript repo matches both the TypeScript and Node adapters; the duplicate
+`npm` entry is collapsed, since Dependabot rejects a repeated
+ecosystem/directory pair.
+
+`init-release` takes `--tool <tool>`. `release-please` is the default and the
+only supported value today; anything else is rejected with the list of
+supported tools. It writes the workflow, `release-please-config.json`, and
+`.release-please-manifest.json`, taking `release-type` from the detected
+language and falling back to `simple`.
+
+`init-scorecard` writes an OpenSSF Scorecard workflow, including the
+`security-events` and `id-token` permissions the action needs to upload its
+SARIF results.
+
+`check-deps` reports whether Dependabot or Renovate is already configured, so
+generating a config and then confirming it is a closed loop.
+
 ## What it checks
 
 Checks are grouped into categories, each contributing to the overall score out
@@ -227,7 +280,7 @@ This is an npm-workspaces monorepo:
 | [`@repoready/cli`](packages/cli) | Commander-based CLI that exposes the `repoready` command. |
 | [`@repoready/plugin-node`](packages/plugin-node) | Node and TypeScript adapters (`node-engines`, `node-publish-files`, `ts-strict`). |
 | [`@repoready/plugin-python`](packages/plugin-python) | Python adapter (`python-pyproject`, `python-lint-config`). |
-| [`@repoready/plugin-github`](packages/plugin-github) | Universal GitHub hygiene adapter (`security-policy`) and the `init-security` generator. |
+| [`@repoready/plugin-github`](packages/plugin-github) | Universal GitHub hygiene adapter (`security-policy`) and the external-tool generators behind `init-security`, `init-dependabot`, `init-scorecard`, and `init-release`. |
 
 Adapters are statically composed in
 [`packages/cli/src/adapters.ts`](packages/cli/src/adapters.ts): the CLI
@@ -257,7 +310,6 @@ Built with TypeScript (NodeNext modules) and [tsup](https://tsup.egoist.dev/).
 
 ## Roadmap
 
-- `repoready init-dependabot`, `init-scorecard`, `init-release`
 - Optional AI layer (`--ai`), disabled by default and bring-your-own-key
 - npm release, Homebrew tap, standalone binaries
 
