@@ -148,7 +148,7 @@ export function formatDepCheckText(result: DepCheckResult): string {
 
     lines.push("Dependency Check");
     lines.push(`Root: ${result.root}`);
-    lines.push(`Detected project type: ${formatProjectTypes(result.detectedProjectTypes)}`);
+    lines.push(`Detected project type: ${formatProjectTypes(result.displayProjectTypes)}`);
     lines.push("");
 
     lines.push(`Manifests: ${result.manifests.join(", ") || "none"}`);

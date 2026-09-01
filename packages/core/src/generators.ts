@@ -1,8 +1,9 @@
-import { resolvePrimaryAdapter } from "./adapters.js";
+import { displayProjectTypes, resolvePrimaryAdapter } from "./adapters.js";
 import { genericAdapter } from "./builtin-adapters.js";
 import { buildLicense } from "./licenses.js";
 import { readGitUserName } from "./fs.js";
-import { GeneratorOptions, ProjectType, RepoContext, RepoGenerator } from "./types.js";
+import { formatProjectTypes } from "./reporters.js";
+import { GeneratorOptions, RepoContext, RepoGenerator } from "./types.js";
 
 type PackageJson = {
     name?: string;
@@ -50,7 +51,7 @@ export const readmeGenerator: RepoGenerator = {
                     description,
                     install: commands.install,
                     test: commands.test,
-                    projectTypes: ctx.projectTypes
+                    projectTypeLabel: formatProjectTypes(displayProjectTypes(ctx.detected))
                 })
             }
         ];
@@ -177,13 +178,6 @@ export const defaultGenerators: RepoGenerator[] = [
     ciGenerator
 ];
 
-export function getGenerator(id: string): RepoGenerator | null {
-    return (
-        defaultGenerators.find((generator) => generator.id === id) ??
-        null
-    );
-}
-
 async function detectProjectName(ctx: RepoContext): Promise<string> {
     if (ctx.projectTypes.includes("node")) {
         const pkg = await ctx.readJson<PackageJson>("package.json");
@@ -223,7 +217,7 @@ async function detectAuthor(ctx: RepoContext, options: GeneratorOptions): Promis
     return (await readGitUserName(ctx.root)) ?? (await detectProjectName(ctx));
 }
 
-/** Shell snippets shown in generated docs, keyed by the repo's primary language. */
+/** Shell snippets shown in generated docs, resolved through the repo's primary adapter. */
 function primaryCommands(ctx: RepoContext): { install: string; test: string } {
     const adapter = resolvePrimaryAdapter(ctx.adapters, ctx.detected, "auto");
 
@@ -238,7 +232,7 @@ function buildReadme(input: {
     description: string;
     install: string;
     test: string;
-    projectTypes: ProjectType[];
+    projectTypeLabel: string;
 }): string {
     return `# ${input.projectName}
 
@@ -249,7 +243,7 @@ ${input.description}
 This repository is maintained with readability, contribution quality, and
 project health in mind.
 
-Detected project type: \`${input.projectTypes.join(", ")}\`
+Detected project type: \`${input.projectTypeLabel}\`
 
 ## Getting started
 

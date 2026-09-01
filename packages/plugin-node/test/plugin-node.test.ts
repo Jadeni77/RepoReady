@@ -5,7 +5,7 @@ import path from "node:path";
 import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
-import { createRepoContext } from "@repoready/core";
+import { ciGenerator, createRepoContext } from "@repoready/core";
 import type { RepoFiles } from "@repoready/core";
 import { nodeAdapter, typescriptAdapter } from "../src/index.js";
 
@@ -97,6 +97,60 @@ describe("typescriptAdapter", () => {
     });
 });
 
+describe("ciSteps shape", () => {
+    // Mirrors the guards in packages/core/test/builtin-adapters.test.ts.
+    // Without them, a mis-indented ciSteps fragment can pass every other
+    // test here while breaking the real workflow written by `init-ci`.
+    const adapters = [nodeAdapter, typescriptAdapter];
+
+    it("indents every ciSteps line by at least six spaces", () => {
+        // A block sequence at 4 spaces still parses as valid YAML when it
+        // sits at the same indent as its parent mapping key ("steps:"), but
+        // breaks the real workflow template in generators.ts, which nests
+        // steps six spaces under a four-space `steps:` key.
+        for (const adapter of adapters) {
+            const lines = adapter.ciSteps!.split("\n");
+
+            for (const line of lines) {
+                if (line.trim() === "") continue;
+
+                const leadingSpaces = line.match(/^ */)![0].length;
+
+                assert.ok(
+                    leadingSpaces >= 6,
+                    `${adapter.id} ciSteps has a line indented only ${leadingSpaces} spaces: ${JSON.stringify(line)}`
+                );
+            }
+        }
+    });
+
+    it("produces steps that parse as YAML inside a workflow", () => {
+        // Mirrors the real shape from buildCiWorkflow() in generators.ts: a
+        // preceding six-space "- name: Checkout" step under the same `steps:`
+        // key. A ciSteps string re-indented to four spaces parses fine against
+        // a bare `steps:\n` wrapper (YAML allows a block sequence at its
+        // parent's indent), but throws here, the way it would in production.
+        for (const adapter of adapters) {
+            const workflow = parseYaml(`jobs:
+  test:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+${adapter.ciSteps}`) as Record<string, any>;
+
+            const steps = workflow.jobs.test.steps;
+
+            assert.ok(Array.isArray(steps) && steps.length > 1, `${adapter.id} produced no steps`);
+
+            for (const step of steps) {
+                assert.ok(step.name, `${adapter.id} has an unnamed step`);
+                assert.ok(step.uses || step.run, `${adapter.id} step "${step.name}" does nothing`);
+            }
+        }
+    });
+});
+
 describe("adapter checks", () => {
     const adapters = [typescriptAdapter, nodeAdapter];
 
@@ -166,5 +220,23 @@ describe("end to end", () => {
         const ctx = await createRepoContext(NODE_EXAMPLE, { adapters: [typescriptAdapter, nodeAdapter] });
 
         assert.deepEqual(ctx.detected.map((d) => d.adapter.id), ["node"]);
+    });
+});
+
+describe("ciGenerator auto-detection", () => {
+    // Restores coverage deleted alongside the switch-based language handling
+    // in generators.ts: with lang "auto", ciGenerator must resolve the
+    // Node example to the Node adapter's CI steps rather than the generic
+    // fallback.
+    it("selects setup-node for the Node example", async () => {
+        const ctx = await createRepoContext(NODE_EXAMPLE, { adapters: [typescriptAdapter, nodeAdapter] });
+        const files = await ciGenerator.generate(ctx, { lang: "auto" });
+        const workflow = parseYaml(files[0]!.content) as any;
+
+        assert.ok(
+            workflow.jobs.test.steps.some((step: any) =>
+                String(step.uses ?? "").startsWith("actions/setup-node")
+            )
+        );
     });
 });

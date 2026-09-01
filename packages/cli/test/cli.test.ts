@@ -166,6 +166,16 @@ describe("repoready check-deps", () => {
         assert.match(result.stdout, /Manifests: package\.json/);
     });
 
+    // Pins that check-deps is wired with the real adapter set. Without
+    // `adapters: defaultAdapters` in check-deps.ts, nothing would be
+    // detected and this would silently report "Generic" instead.
+    it("detects the project type using the real adapter set", async () => {
+        const result = await runCli(["check-deps", "--cwd", TS_EXAMPLE]);
+
+        assert.equal(result.exitCode, 0);
+        assert.match(result.stdout, /Detected project type: TypeScript/);
+    });
+
     it("emits valid JSON with --json", async () => {
         const result = await runCli(["check-deps", "--cwd", NODE_EXAMPLE, "--json"]);
         const parsed = JSON.parse(result.stdout);
