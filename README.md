@@ -65,28 +65,36 @@ current one.
 
 ```
 $ repoready doctor
-RepoReady Score: 34/100
-Points: 34/100
+RepoReady Score: 33/100
+Points: 38/115
 Root: /path/to/your/repo
 Detected project type: Node
 
 Category Scores:
-   Community: 30/100 (15/50)
+   Community: 12/100 (6/50)
    Automation: 0/100 (0/15)
-   Dependencies: 80/100 (12/15)
+   Structure: 70/100 (14/20)
+   Dependencies: 70/100 (14/20)
+   Security: 40/100 (4/10)
 
 Community
-   ✅ README: README.md found.
+   ❌ README: No README file found.
    ❌ License: No license file found.
    ⚠️ Code of Conduct: No code of conduct found.
 
 Automation
    ❌ CI Workflow: No GitHub Actions workflow directory found.
 
+Security
+   ⚠️ .gitignore: No .gitignore file found.
+   ⚠️ Security Policy: No SECURITY.md; contributors have no documented way to report vulnerabilities.
+
 Suggested fixes:
-    1. Run repoready init-license.
-    2. Run repoready init-code-of-conduct.
-    3. Run repoready init-ci.
+    1. Run repoready init-readme.
+    2. Run repoready init-license.
+    3. Run repoready init-code-of-conduct.
+    4. Run repoready init-ci.
+    5. Run repoready init-security.
 ```
 
 Fail a build if the repo drops below a readiness threshold:
@@ -170,6 +178,10 @@ to one of the categories above (`security-policy` counts toward security,
 | `python-lint-config` | Python | A linter/formatter config file (`ruff.toml`, `.flake8`, `.pylintrc`, ...) or a matching `[tool.*]` section in `pyproject.toml`. |
 | `security-policy` | GitHub | A `SECURITY.md` (or `.github/SECURITY.md`) describing how to report vulnerabilities. |
 
+Go, Rust, Java, Ruby, and PHP are detected and get language-appropriate CI
+workflows and install/test commands, but contribute no checks of their own
+yet — their adapters live in `@repoready/core` and carry only data.
+
 TypeScript is detected distinctly from Node: a repo with a `tsconfig.json` or
 a `typescript` dependency is reported as TypeScript rather than Node, though
 `node` still appears in the JSON output's `detectedProjectTypes` array since
@@ -211,7 +223,7 @@ This is an npm-workspaces monorepo:
 
 | Package | Description |
 | --- | --- |
-| [`@repoready/core`](packages/core) | Repo scanning, health checks, scoring, generators, and output formatting. Defines the `LanguageAdapter` interface but ships no language-specific adapters itself. |
+| [`@repoready/core`](packages/core) | Repo scanning, health checks, scoring, generators, and output formatting. Defines the `LanguageAdapter` interface, plus data-only adapters for Go, Rust, Java, Ruby, PHP, and the generic fallback. |
 | [`@repoready/cli`](packages/cli) | Commander-based CLI that exposes the `repoready` command. |
 | [`@repoready/plugin-node`](packages/plugin-node) | Node and TypeScript adapters (`node-engines`, `node-publish-files`, `ts-strict`). |
 | [`@repoready/plugin-python`](packages/plugin-python) | Python adapter (`python-pyproject`, `python-lint-config`). |
