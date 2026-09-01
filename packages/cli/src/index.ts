@@ -5,6 +5,7 @@ import { registerCheckDepsCommand } from "./commands/check-deps.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerFixCommand } from "./commands/fix.js";
 import { registerInitCommands } from "./commands/init.js";
+import { registerSecurityCommand } from "./commands/security.js";
 
 const program = new Command();
 
@@ -17,6 +18,7 @@ registerDoctorCommand(program);
 registerFixCommand(program);
 registerCheckDepsCommand(program);
 registerInitCommands(program);
+registerSecurityCommand(program);
 
 program.parseAsync(process.argv).catch((error: unknown) => {
     console.error(error instanceof Error ? error.message : error);

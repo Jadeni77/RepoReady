@@ -13,6 +13,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(here, "../../..");
 const CLI_ENTRY = path.join(REPO_ROOT, "packages/cli/src/index.ts");
 const NODE_EXAMPLE = path.join(REPO_ROOT, "examples/node-basic");
+const TS_EXAMPLE = path.join(REPO_ROOT, "examples/typescript-basic");
+const PYTHON_EXAMPLE = path.join(REPO_ROOT, "examples/python-basic");
 
 type CliRun = {
     stdout: string;
@@ -84,7 +86,8 @@ describe("repoready --help", () => {
             "init-code-of-conduct",
             "init-issues",
             "init-pr-template",
-            "init-ci"
+            "init-ci",
+            "init-security"
         ]) {
             assert.match(result.stdout, new RegExp(`\\b${command}\\b`), `missing ${command}`);
         }
@@ -279,6 +282,73 @@ describe("repoready init-*", () => {
         const result = await runCli(["init-ci", "--lang", "cobol"]);
 
         assert.equal(result.exitCode, 1);
-        assert.match(result.stderr + result.stdout, /--lang must be one of/);
+        assert.match(result.stderr + result.stdout, /Unknown language "cobol"/);
+    });
+});
+
+describe("language adapters", () => {
+    it("reports TypeScript for a TypeScript repo", async () => {
+        const result = await runCli(["doctor", "--cwd", TS_EXAMPLE]);
+
+        assert.match(result.stdout, /Detected project type: TypeScript/);
+        assert.doesNotMatch(result.stdout, /Detected project type:.*Node/);
+    });
+
+    it("still reports Node for a plain JavaScript repo", async () => {
+        const result = await runCli(["doctor", "--cwd", NODE_EXAMPLE]);
+
+        assert.match(result.stdout, /Detected project type: Node/);
+    });
+
+    it("keeps node in projectTypes so existing logic still works", async () => {
+        const result = await runCli(["doctor", "--cwd", TS_EXAMPLE, "--json"]);
+        const parsed = JSON.parse(result.stdout);
+
+        assert.ok(parsed.detectedProjectTypes.includes("node"));
+        assert.ok(parsed.detectedProjectTypes.includes("typescript"));
+    });
+
+    it("runs adapter checks for the detected language", async () => {
+        const result = await runCli(["doctor", "--cwd", NODE_EXAMPLE, "--json"]);
+        const ids = JSON.parse(result.stdout).results.map((c: { id: string }) => c.id);
+
+        assert.ok(ids.includes("node-engines"), "node adapter check missing");
+        assert.ok(ids.includes("security-policy"), "github adapter check missing");
+        assert.ok(!ids.includes("python-pyproject"), "python check leaked into a Node repo");
+    });
+
+    it("runs python checks only for a Python repo", async () => {
+        const result = await runCli(["doctor", "--cwd", PYTHON_EXAMPLE, "--json"]);
+        const ids = JSON.parse(result.stdout).results.map((c: { id: string }) => c.id);
+
+        assert.ok(ids.includes("python-pyproject"));
+        assert.ok(!ids.includes("node-engines"));
+    });
+
+    it("generates a TypeScript workflow for a TypeScript repo", async () => {
+        const root = await tempRepo({
+            "package.json": "{}",
+            "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true } })
+        });
+
+        await runCli(["init-ci", "--cwd", root, "--yes"]);
+        const workflow = await readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
+
+        assert.match(workflow, /npm run typecheck --if-present/);
+    });
+
+    it("exposes init-security", async () => {
+        const root = await tempRepo({});
+        const result = await runCli(["init-security", "--cwd", root, "--yes"]);
+
+        assert.equal(result.exitCode, 0);
+        assert.equal(await exists(root, "SECURITY.md"), true);
+    });
+
+    it("fix writes SECURITY.md from the github adapter", async () => {
+        const root = await tempRepo({ "package.json": "{}" });
+        await runCli(["fix", "--cwd", root, "--yes"]);
+
+        assert.equal(await exists(root, "SECURITY.md"), true);
     });
 });

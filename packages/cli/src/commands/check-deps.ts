@@ -1,5 +1,6 @@
 import { checkDependencies, formatDepCheckJson, formatDepCheckText } from "@repoready/core";
 import type { Command } from "commander";
+import { defaultAdapters } from "../adapters.js";
 import { getDefaultCwd } from "../cwd.js";
 
 type CheckDepsCommandOptions = {
@@ -17,7 +18,8 @@ export function registerCheckDepsCommand(program: Command): void {
         .option("--strict", "Exit with code 1 if any warning or failure is found.")
         .action(async (options: CheckDepsCommandOptions) => {
             const result = await checkDependencies({
-                cwd: options.cwd ?? getDefaultCwd()
+                cwd: options.cwd ?? getDefaultCwd(),
+                adapters: defaultAdapters
             });
 
             console.log(

@@ -15,6 +15,9 @@
     },
     "dependencies": {
         "@repoready/core": "0.0.1",
+        "@repoready/plugin-github": "0.0.1",
+        "@repoready/plugin-node": "0.0.1",
+        "@repoready/plugin-python": "0.0.1",
         "commander": "^12.0.0"
     }
 }

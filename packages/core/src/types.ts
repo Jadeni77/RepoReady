@@ -111,7 +111,10 @@ export type DoctorResult = {
     score: number;
     pointsEarned: number;
     pointsPossible: number;
+    /** Every detected project type, unfiltered. TypeScript repos keep "node" here. */
     detectedProjectTypes: ProjectType[];
+    /** Detected project types with superseded ones (e.g. "node" under "typescript") hidden, for human display. */
+    displayProjectTypes: ProjectType[];
     categoryScores: CategoryScore[];
     results: CheckResult[];
     suggestions: string[];

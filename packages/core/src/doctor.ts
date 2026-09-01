@@ -1,3 +1,4 @@
+import { displayProjectTypes } from "./adapters.js";
 import { defaultChecks } from "./checks.js";
 import { createRepoContext } from "./scan.js";
 import { CategoryScore, CheckCategory, CheckResult, DoctorOptions, DoctorResult, HealthCheck } from "./types.js";
@@ -63,6 +64,7 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
         pointsEarned,
         pointsPossible,
         detectedProjectTypes: ctx.projectTypes,
+        displayProjectTypes: displayProjectTypes(ctx.detected),
         categoryScores: calculateCategoryScores(results),
         results,
         suggestions: Array.from(new Set(suggestions))
