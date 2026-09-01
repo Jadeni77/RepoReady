@@ -15,7 +15,7 @@ import {
     formatGeneratorText,
     formatProjectTypes
 } from "../src/reporters.js";
-import { PERFECT_REPO, makeTempRepo, removeTempRepo } from "./helpers.js";
+import { PERFECT_REPO, TEST_ADAPTERS, makeTempRepo, removeTempRepo } from "./helpers.js";
 
 const tempRepos: string[] = [];
 
@@ -40,7 +40,10 @@ describe("formatProjectTypes", () => {
 
 describe("formatDoctorText", () => {
     it("leads with the score and the detected project type", async () => {
-        const result = await runDoctor({ cwd: await temp({ "package.json": "{}" }) });
+        const result = await runDoctor({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: TEST_ADAPTERS
+        });
         const output = formatDoctorText(result);
 
         assert.match(output, new RegExp(`^RepoReady Score: ${result.score}/100`));
@@ -48,7 +51,9 @@ describe("formatDoctorText", () => {
     });
 
     it("groups checks under their category and marks each status", async () => {
-        const output = formatDoctorText(await runDoctor({ cwd: await temp({}) }));
+        const output = formatDoctorText(
+            await runDoctor({ cwd: await temp({}), adapters: TEST_ADAPTERS })
+        );
 
         assert.match(output, /^Community$/m);
         assert.match(output, /^Automation$/m);
@@ -56,14 +61,18 @@ describe("formatDoctorText", () => {
     });
 
     it("lists suggested fixes", async () => {
-        const output = formatDoctorText(await runDoctor({ cwd: await temp({}) }));
+        const output = formatDoctorText(
+            await runDoctor({ cwd: await temp({}), adapters: TEST_ADAPTERS })
+        );
 
         assert.match(output, /Suggested fixes:/);
         assert.match(output, /repoready init-readme/);
     });
 
     it("congratulates a healthy repo instead of listing fixes", async () => {
-        const output = formatDoctorText(await runDoctor({ cwd: await temp(PERFECT_REPO) }));
+        const output = formatDoctorText(
+            await runDoctor({ cwd: await temp(PERFECT_REPO), adapters: TEST_ADAPTERS })
+        );
 
         assert.match(output, /No suggested fixes/);
         assert.doesNotMatch(output, /Suggested fixes:/);
@@ -72,7 +81,10 @@ describe("formatDoctorText", () => {
 
 describe("formatDoctorJson", () => {
     it("round-trips the result", async () => {
-        const result = await runDoctor({ cwd: await temp({ "package.json": "{}" }) });
+        const result = await runDoctor({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: TEST_ADAPTERS
+        });
         const parsed = JSON.parse(formatDoctorJson(result));
 
         assert.equal(parsed.score, result.score);
@@ -85,7 +97,8 @@ describe("formatGeneratorText", () => {
     it("shows the dry-run preview inline", async () => {
         const result = await runGenerator(contributingGenerator, {
             cwd: await temp({}),
-            dryRun: true
+            dryRun: true,
+            adapters: TEST_ADAPTERS
         });
 
         const output = formatGeneratorText(result);
@@ -98,7 +111,8 @@ describe("formatGeneratorText", () => {
     it("omits file bodies when actually writing", async () => {
         const result = await runGenerator(contributingGenerator, {
             cwd: await temp({}),
-            yes: true
+            yes: true,
+            adapters: TEST_ADAPTERS
         });
 
         const output = formatGeneratorText(result);
@@ -111,7 +125,8 @@ describe("formatGeneratorText", () => {
     it("explains why a file was skipped", async () => {
         const result = await runGenerator(contributingGenerator, {
             cwd: await temp({ "CONTRIBUTING.md": "mine" }),
-            yes: true
+            yes: true,
+            adapters: TEST_ADAPTERS
         });
 
         assert.match(formatGeneratorText(result), /--force/);
@@ -121,7 +136,8 @@ describe("formatGeneratorText", () => {
 describe("formatDepCheckText", () => {
     it("summarises manifests, lockfiles, and next steps", async () => {
         const result = await checkDependencies({
-            cwd: await temp({ "package.json": JSON.stringify({ dependencies: { a: "*" } }) })
+            cwd: await temp({ "package.json": JSON.stringify({ dependencies: { a: "*" } }) }),
+            adapters: TEST_ADAPTERS
         });
 
         const output = formatDepCheckText(result);
@@ -141,14 +157,18 @@ describe("formatDepCheckText", () => {
                 }),
                 "package-lock.json": "{}",
                 ".github/dependabot.yml": "version: 2"
-            })
+            }),
+            adapters: TEST_ADAPTERS
         });
 
         assert.match(formatDepCheckText(result), /No dependency issues found/);
     });
 
     it("round-trips as JSON", async () => {
-        const result = await checkDependencies({ cwd: await temp({ "package.json": "{}" }) });
+        const result = await checkDependencies({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: TEST_ADAPTERS
+        });
         const parsed = JSON.parse(formatDepCheckJson(result));
 
         assert.deepEqual(parsed.manifests, ["package.json"]);
@@ -159,7 +179,8 @@ describe("formatFixText", () => {
     it("numbers the recommended fixes", async () => {
         const result = await runFix({
             cwd: await temp({ "package.json": "{}" }),
-            dryRun: true
+            dryRun: true,
+            adapters: TEST_ADAPTERS
         });
 
         const output = formatFixText(result);
@@ -170,7 +191,11 @@ describe("formatFixText", () => {
     });
 
     it("lists what it wrote after a real run", async () => {
-        const result = await runFix({ cwd: await temp({ "package.json": "{}" }), yes: true });
+        const result = await runFix({
+            cwd: await temp({ "package.json": "{}" }),
+            yes: true,
+            adapters: TEST_ADAPTERS
+        });
         const output = formatFixText(result);
 
         assert.match(output, /Applied \d+ file\(s\):/);
@@ -180,7 +205,7 @@ describe("formatFixText", () => {
 
     it("reports a healthy repo plainly", async () => {
         const root = await temp(PERFECT_REPO);
-        const result = await runFix({ cwd: root, yes: true });
+        const result = await runFix({ cwd: root, yes: true, adapters: TEST_ADAPTERS });
 
         assert.match(formatFixText(result), /found no fixes to apply/);
     });
@@ -188,7 +213,8 @@ describe("formatFixText", () => {
     it("round-trips as JSON", async () => {
         const result = await runFix({
             cwd: await temp({ "package.json": "{}" }),
-            dryRun: true
+            dryRun: true,
+            adapters: TEST_ADAPTERS
         });
 
         const parsed = JSON.parse(formatFixJson(result));
