@@ -1,5 +1,6 @@
+import { defaultChecks } from "./checks.js";
 import { runDoctor } from "./doctor.js";
-import { getGenerator } from "./generators.js";
+import { defaultGenerators } from "./generators.js";
 import { applyPlan, canPrompt, confirmApply, describeFiles, planGenerator } from "./generator-runner.js";
 import { createRepoContext } from "./scan.js";
 import type {
@@ -8,23 +9,11 @@ import type {
     FixOptions,
     FixResult,
     GeneratorOptions,
-    PlannedFile
+    HealthCheck,
+    PlannedFile,
+    RepoContext,
+    RepoGenerator
 } from "./types.js";
-
-/**
- * Which generator repairs which failing check. Checks with no entry here
- * (tests, lockfile, dependency manifest) need human judgement, so `fix`
- * reports them via `doctor` rather than guessing.
- */
-const CHECK_TO_GENERATOR: Record<string, string> = {
-    "readme": "readme",
-    "license": "license",
-    "contributing": "contributing",
-    "code-of-conduct": "code-of-conduct",
-    "issue-template": "issues",
-    "pr-template": "pr-template",
-    "ci": "ci"
-};
 
 export type FixPlan = {
     root: string;
@@ -51,10 +40,10 @@ export async function planFix(options: FixOptions = {}): Promise<FixPlan> {
     for (const check of doctorResult.results) {
         if (check.status === "pass") continue;
 
-        const generatorId = CHECK_TO_GENERATOR[check.id];
+        const generatorId = findCheck(ctx, check.id)?.fixedBy;
         if (!generatorId) continue;
 
-        const generator = getGenerator(generatorId);
+        const generator = findGenerator(ctx, generatorId);
         if (!generator) continue;
 
         const plan = await planGenerator(generator, generatorOptions, ctx);
@@ -142,4 +131,20 @@ function selectItems(items: FixItem[], options: FixOptions): FixItem[] {
 
 function isSafe(files: PlannedFile[]): boolean {
     return files.length > 0 && files.every((file) => file.action === "create");
+}
+
+/** Finds a check definition by ID across core and every detected adapter. */
+function findCheck(ctx: RepoContext, id: string): HealthCheck | undefined {
+    return [
+        ...defaultChecks,
+        ...ctx.detected.flatMap((entry) => entry.adapter.checks ?? [])
+    ].find((check) => check.id === id);
+}
+
+/** Finds a generator by ID across core and every detected adapter. */
+function findGenerator(ctx: RepoContext, id: string): RepoGenerator | undefined {
+    return [
+        ...defaultGenerators,
+        ...ctx.detected.flatMap((entry) => entry.adapter.generators ?? [])
+    ].find((generator) => generator.id === id);
 }

@@ -7,7 +7,10 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
 
     const checksToRun: HealthCheck[] = [];
 
-    for (const check of defaultChecks) {
+    const adapterChecks = ctx.detected.flatMap((entry) => entry.adapter.checks ?? []);
+    const allChecks = [...defaultChecks, ...adapterChecks];
+
+    for (const check of allChecks) {
         const enabledConfig = ctx.config.checks?.[check.id] !== false;
         if (!enabledConfig) continue;
 
