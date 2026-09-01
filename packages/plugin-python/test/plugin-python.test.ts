@@ -49,11 +49,15 @@ describe("pythonAdapter", () => {
     });
 
     it("detects requirements.txt", async () => {
-        assert.equal((await pythonAdapter.detect(files(["requirements.txt"]))).detected, true);
+        const result = await pythonAdapter.detect(files(["requirements.txt"]));
+        assert.equal(result.detected, true);
+        assert.deepEqual(result.evidence, ["requirements.txt"]);
     });
 
     it("detects setup.py", async () => {
-        assert.equal((await pythonAdapter.detect(files(["setup.py"]))).detected, true);
+        const result = await pythonAdapter.detect(files(["setup.py"]));
+        assert.equal(result.detected, true);
+        assert.deepEqual(result.evidence, ["setup.py"]);
     });
 
     it("does not detect an empty repo", async () => {
@@ -90,6 +94,13 @@ describe("python checks", () => {
 
     it("python-lint-config detects a [tool.ruff] section in pyproject", async () => {
         const root = await temp({ "pyproject.toml": "[project]\nname='x'\n[tool.ruff]\nline-length = 100\n" });
+        assert.equal((await runCheck("python-lint-config", root))?.status, "pass");
+    });
+
+    it("python-lint-config detects a dotted [tool.ruff.lint] subtable in pyproject", async () => {
+        const root = await temp({
+            "pyproject.toml": "[project]\nname='x'\n[tool.ruff.lint]\nselect = ['E', 'F']\n"
+        });
         assert.equal((await runCheck("python-lint-config", root))?.status, "pass");
     });
 
