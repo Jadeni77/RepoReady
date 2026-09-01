@@ -49,6 +49,7 @@ npm run dev -w @repoready/cli -- doctor
 | `repoready init-issues` | Generate GitHub issue templates. |
 | `repoready init-pr-template` | Generate a GitHub pull request template. |
 | `repoready init-ci` | Generate a GitHub Actions CI workflow. |
+| `repoready init-security` | Generate a `SECURITY.md` file. |
 
 Every command accepts `--cwd <path>` to target a directory other than the
 current one.
@@ -138,8 +139,9 @@ All generators share the same write-safety flags:
 `bsd-3-clause`, `unlicense`; defaults to `mit`) and `--author <name>`, which
 otherwise falls back to `package.json`, then `git config user.name`.
 
-`init-ci` takes `--lang <lang>` (`auto`, `node`, `python`, `go`, `rust`, `java`,
-`ruby`, `php`, `generic`) and detects the language from the repo by default.
+`init-ci` takes `--lang <lang>` (`auto`, or any registered language —
+`typescript`, `node`, `python`, `go`, `rust`, `java`, `ruby`, `php`,
+`generic`) and detects the language from the repo by default.
 
 ## What it checks
 
@@ -152,8 +154,40 @@ of 100:
 - **dependencies** — dependency manifest, lockfile
 - **security** — `.gitignore` hygiene, including whether `.env` is ignored
 
-Language detection covers Node, Python, Go, Rust, Java, Ruby, and PHP, and
-falls back to a generic profile.
+### Language-specific checks
+
+Each detected language adapter contributes its own checks on top of the ones
+above. They only run when their adapter is detected, and each still belongs
+to one of the categories above (`security-policy` counts toward security,
+`node-engines` toward dependencies, the rest toward structure):
+
+| Check | Adapter | What it looks for |
+| --- | --- | --- |
+| `ts-strict` | TypeScript | `"strict": true` in `tsconfig.json`. |
+| `node-engines` | Node | `engines.node` declared in `package.json`. |
+| `node-publish-files` | Node | A `files` allowlist in `package.json` or an `.npmignore`, so the published tarball doesn't include everything. Skipped for private packages. |
+| `python-pyproject` | Python | A `pyproject.toml` for project metadata. |
+| `python-lint-config` | Python | A linter/formatter config file (`ruff.toml`, `.flake8`, `.pylintrc`, ...) or a matching `[tool.*]` section in `pyproject.toml`. |
+| `security-policy` | GitHub | A `SECURITY.md` (or `.github/SECURITY.md`) describing how to report vulnerabilities. |
+
+TypeScript is detected distinctly from Node: a repo with a `tsconfig.json` or
+a `typescript` dependency is reported as TypeScript rather than Node, though
+`node` still appears in the JSON output's `detectedProjectTypes` array since
+the Node adapter also matches. `--lang` accepts any registered language, not
+just the ones listed above by name — see `packages/cli/src/adapters.ts` for
+the full set.
+
+### Scoring across languages
+
+Each detected adapter's checks add to `pointsPossible`, so raw point totals
+are not comparable across repos: how many points are available depends on
+which adapters detect and which of their checks apply (`node-publish-files`,
+for example, is skipped for private packages). A Python repo and a Node repo
+will not generally have the same number of points possible. The `/100` score,
+not the raw point count, is the figure that's comparable between repos.
+`security-policy` is the one check that applies to every repo regardless of
+language: the GitHub adapter has no `projectType` and its `detect` always
+returns true.
 
 ## Configuration
 
@@ -177,11 +211,21 @@ This is an npm-workspaces monorepo:
 
 | Package | Description |
 | --- | --- |
-| [`@repoready/core`](packages/core) | Repo scanning, health checks, scoring, generators, and output formatting. |
+| [`@repoready/core`](packages/core) | Repo scanning, health checks, scoring, generators, and output formatting. Defines the `LanguageAdapter` interface but ships no language-specific adapters itself. |
 | [`@repoready/cli`](packages/cli) | Commander-based CLI that exposes the `repoready` command. |
+| [`@repoready/plugin-node`](packages/plugin-node) | Node and TypeScript adapters (`node-engines`, `node-publish-files`, `ts-strict`). |
+| [`@repoready/plugin-python`](packages/plugin-python) | Python adapter (`python-pyproject`, `python-lint-config`). |
+| [`@repoready/plugin-github`](packages/plugin-github) | Universal GitHub hygiene adapter (`security-policy`) and the `init-security` generator. |
+
+Adapters are statically composed in
+[`packages/cli/src/adapters.ts`](packages/cli/src/adapters.ts): the CLI
+imports each plugin package directly and lists it in a fixed array.
+Third-party plugin loading is not supported — adding a language means adding
+an adapter to that array, not dropping a package on disk.
 
 [`examples/`](examples) holds deliberately bare repos (`node-basic`,
-`python-basic`) used both as demos and as read-only test fixtures.
+`python-basic`, `typescript-basic`) used both as demos and as read-only test
+fixtures.
 
 ### Development
 
@@ -201,7 +245,6 @@ Built with TypeScript (NodeNext modules) and [tsup](https://tsup.egoist.dev/).
 
 ## Roadmap
 
-- Language adapter plugin interface (`plugin-node`, `plugin-python`, `plugin-github`)
 - `repoready init-dependabot`, `init-scorecard`, `init-release`
 - Optional AI layer (`--ai`), disabled by default and bring-your-own-key
 - npm release, Homebrew tap, standalone binaries
