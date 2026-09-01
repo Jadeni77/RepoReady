@@ -22,7 +22,13 @@ type FixCommandOptions = {
     yes?: boolean;
     interactive?: boolean;
     json?: boolean;
-    lang?: ProjectType | "auto";
+    /**
+     * Raw commander input. Nothing validates it at this layer — there is no
+     * parseLanguage step anymore — so it is not narrowed to ProjectType |
+     * "auto" here. resolvePrimaryAdapter does the real validation and throws
+     * "Unknown language" for anything unregistered.
+     */
+    lang?: string;
     license?: LicenseId;
     author?: string;
 };
@@ -46,7 +52,9 @@ export function registerFixCommand(program: Command): void {
                 dryRun: Boolean(options.dryRun),
                 force: Boolean(options.force),
                 yes: Boolean(options.yes),
-                lang: options.lang ?? "auto",
+                // resolvePrimaryAdapter validates this against the registered
+                // adapters and throws "Unknown language" for anything else.
+                lang: (options.lang ?? "auto") as ProjectType | "auto",
                 license: options.license,
                 author: options.author,
                 adapters: defaultAdapters
