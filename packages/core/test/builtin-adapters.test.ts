@@ -35,15 +35,46 @@ describe("builtinAdapters", () => {
         }
     });
 
-    it("produces steps that parse as YAML inside a workflow", () => {
+    it("indents every ciSteps line by at least six spaces", () => {
+        // Pins the whitespace that "parses as YAML" alone cannot catch: a
+        // block sequence at 4 spaces still parses as valid YAML when it sits
+        // at the same indent as its parent mapping key, but breaks the real
+        // workflow template in generators.ts, which nests steps six spaces
+        // under a four-space `steps:` key.
         for (const adapter of builtinAdapters) {
-            const workflow = parseYaml(
-                `jobs:\n  test:\n    steps:\n${adapter.ciSteps}`
-            ) as Record<string, any>;
+            const lines = adapter.ciSteps!.split("\n");
+
+            for (const line of lines) {
+                if (line.trim() === "") continue;
+
+                const leadingSpaces = line.match(/^ */)![0].length;
+
+                assert.ok(
+                    leadingSpaces >= 6,
+                    `${adapter.id} ciSteps has a line indented only ${leadingSpaces} spaces: ${JSON.stringify(line)}`
+                );
+            }
+        }
+    });
+
+    it("produces steps that parse as YAML inside a workflow", () => {
+        // Mirrors the real shape from buildCiWorkflow() in generators.ts: a
+        // preceding six-space "- name: Checkout" step under the same `steps:`
+        // key. A ciSteps string re-indented to four spaces parses fine against
+        // a bare `steps:\n` wrapper (YAML allows a block sequence at its
+        // parent's indent), but throws here, the way it would in production.
+        for (const adapter of builtinAdapters) {
+            const workflow = parseYaml(`jobs:
+  test:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+${adapter.ciSteps}`) as Record<string, any>;
 
             const steps = workflow.jobs.test.steps;
 
-            assert.ok(Array.isArray(steps) && steps.length > 0, `${adapter.id} produced no steps`);
+            assert.ok(Array.isArray(steps) && steps.length > 1, `${adapter.id} produced no steps`);
 
             for (const step of steps) {
                 assert.ok(step.name, `${adapter.id} has an unnamed step`);
@@ -79,8 +110,10 @@ describe("builtinAdapters", () => {
 
         it("detects java from build.gradle too", async () => {
             const java = builtinAdapters.find((a) => a.id === "java")!;
+            const result = await java.detect(files(["build.gradle"]));
 
-            assert.equal((await java.detect(files(["build.gradle"]))).detected, true);
+            assert.equal(result.detected, true);
+            assert.deepEqual(result.evidence, ["build.gradle"]);
         });
     });
 
