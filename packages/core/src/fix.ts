@@ -34,15 +34,16 @@ export type FixPlan = {
 
 /** Works out every available fix without writing anything. */
 export async function planFix(options: FixOptions = {}): Promise<FixPlan> {
-    const ctx = await createRepoContext(options.cwd);
-    const doctorResult = await runDoctor({ cwd: ctx.root });
+    const ctx = await createRepoContext(options.cwd, { adapters: options.adapters });
+    const doctorResult = await runDoctor({ cwd: ctx.root, adapters: options.adapters });
 
     const generatorOptions: GeneratorOptions = {
         cwd: ctx.root,
         force: options.force,
         lang: options.lang ?? "auto",
         license: options.license,
-        author: options.author
+        author: options.author,
+        adapters: options.adapters
     };
 
     const items: FixItem[] = [];

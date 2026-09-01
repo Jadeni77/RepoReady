@@ -4,6 +4,7 @@ import { checkDependencies } from "../src/deps.js";
 import {
     NODE_EXAMPLE,
     PYTHON_EXAMPLE,
+    TEST_ADAPTERS,
     makeTempRepo,
     removeTempRepo
 } from "./helpers.js";
@@ -25,7 +26,10 @@ describe("checkDependencies", () => {
         result.issues.map((issue) => issue.id);
 
     it("reports a missing manifest and stops there", async () => {
-        const result = await checkDependencies({ cwd: await temp({ "notes.txt": "" }) });
+        const result = await checkDependencies({
+            cwd: await temp({ "notes.txt": "" }),
+            adapters: TEST_ADAPTERS
+        });
 
         assert.deepEqual(issueIds(result), ["no-manifest"]);
         assert.deepEqual(result.manifests, []);
@@ -34,7 +38,8 @@ describe("checkDependencies", () => {
 
     it("lists the manifests and lockfiles it found", async () => {
         const result = await checkDependencies({
-            cwd: await temp({ "package.json": "{}", "package-lock.json": "{}" })
+            cwd: await temp({ "package.json": "{}", "package-lock.json": "{}" }),
+            adapters: TEST_ADAPTERS
         });
 
         assert.deepEqual(result.manifests, ["package.json"]);
@@ -43,7 +48,10 @@ describe("checkDependencies", () => {
     });
 
     it("flags a missing lockfile with a language-specific fix", async () => {
-        const result = await checkDependencies({ cwd: await temp({ "package.json": "{}" }) });
+        const result = await checkDependencies({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: TEST_ADAPTERS
+        });
         const issue = result.issues.find((i) => i.id === "no-lockfile");
 
         assert.ok(issue);
@@ -52,10 +60,12 @@ describe("checkDependencies", () => {
 
     it("detects Dependabot and Renovate config", async () => {
         const dependabot = await checkDependencies({
-            cwd: await temp({ "package.json": "{}", ".github/dependabot.yml": "version: 2" })
+            cwd: await temp({ "package.json": "{}", ".github/dependabot.yml": "version: 2" }),
+            adapters: TEST_ADAPTERS
         });
         const renovate = await checkDependencies({
-            cwd: await temp({ "package.json": "{}", "renovate.json": "{}" })
+            cwd: await temp({ "package.json": "{}", "renovate.json": "{}" }),
+            adapters: TEST_ADAPTERS
         });
 
         assert.deepEqual(dependabot.updateTools, [".github/dependabot.yml"]);
@@ -65,7 +75,10 @@ describe("checkDependencies", () => {
     });
 
     it("flags a repo with no automated update tooling", async () => {
-        const result = await checkDependencies({ cwd: await temp({ "package.json": "{}" }) });
+        const result = await checkDependencies({
+            cwd: await temp({ "package.json": "{}" }),
+            adapters: TEST_ADAPTERS
+        });
 
         assert.ok(issueIds(result).includes("no-update-tool"));
     });
@@ -78,7 +91,8 @@ describe("checkDependencies", () => {
                         dependencies: { a: "^1.0.0", b: "^2.0.0" },
                         devDependencies: { c: "^3.0.0" }
                     })
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             assert.equal(result.dependencyCount, 3);
@@ -90,7 +104,8 @@ describe("checkDependencies", () => {
                     "package.json": JSON.stringify({
                         dependencies: { loose: "*", latest: "latest", fine: "^1.2.3" }
                     })
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             const issue = result.issues.find((i) => i.id === "node-floating-ranges");
@@ -107,7 +122,8 @@ describe("checkDependencies", () => {
                     "package.json": JSON.stringify({
                         dependencies: { a: "^1.2.3", b: "~2.0.0", c: "1.0.0", d: ">=3 <4" }
                     })
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             assert.ok(!issueIds(result).includes("node-floating-ranges"));
@@ -119,7 +135,8 @@ describe("checkDependencies", () => {
                     "package.json": JSON.stringify({
                         dependencies: { forked: "github:owner/repo" }
                     })
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             const issue = result.issues.find((i) => i.id === "node-non-registry-deps");
@@ -132,7 +149,8 @@ describe("checkDependencies", () => {
             const withEngines = await checkDependencies({
                 cwd: await temp({
                     "package.json": JSON.stringify({ engines: { node: ">=20" } })
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             assert.ok(!issueIds(withEngines).includes("node-no-engines"));
@@ -140,7 +158,8 @@ describe("checkDependencies", () => {
 
         it("fails loudly on an unparseable package.json", async () => {
             const result = await checkDependencies({
-                cwd: await temp({ "package.json": "{ not json" })
+                cwd: await temp({ "package.json": "{ not json" }),
+                adapters: TEST_ADAPTERS
             });
 
             const issue = result.issues.find((i) => i.id === "node-unreadable-manifest");
@@ -149,7 +168,10 @@ describe("checkDependencies", () => {
         });
 
         it("names the tools to run next", async () => {
-            const result = await checkDependencies({ cwd: await temp({ "package.json": "{}" }) });
+            const result = await checkDependencies({
+                cwd: await temp({ "package.json": "{}" }),
+                adapters: TEST_ADAPTERS
+            });
 
             assert.ok(result.nextCommands.includes("npm outdated"));
             assert.ok(result.nextCommands.includes("npx npm-check-updates --interactive"));
@@ -158,7 +180,7 @@ describe("checkDependencies", () => {
 
     describe("Python projects", () => {
         it("flags requirements with no version constraint", async () => {
-            const result = await checkDependencies({ cwd: PYTHON_EXAMPLE });
+            const result = await checkDependencies({ cwd: PYTHON_EXAMPLE, adapters: TEST_ADAPTERS });
             const issue = result.issues.find((i) => i.id === "python-unpinned-requirements");
 
             assert.ok(issue);
@@ -172,7 +194,8 @@ describe("checkDependencies", () => {
                     "pyproject.toml": "[project]\nname = 'x'",
                     "requirements.txt":
                         "# a comment\n--index-url https://example.com\nrequests==2.0.0\n\nflask>=3  # inline\n"
-                })
+                }),
+                adapters: TEST_ADAPTERS
             });
 
             assert.equal(result.dependencyCount, 2);
@@ -180,14 +203,14 @@ describe("checkDependencies", () => {
         });
 
         it("names the Python tools to run next", async () => {
-            const result = await checkDependencies({ cwd: PYTHON_EXAMPLE });
+            const result = await checkDependencies({ cwd: PYTHON_EXAMPLE, adapters: TEST_ADAPTERS });
 
             assert.ok(result.nextCommands.includes("pip list --outdated"));
         });
     });
 
     it("audits the bare Node example end to end", async () => {
-        const result = await checkDependencies({ cwd: NODE_EXAMPLE });
+        const result = await checkDependencies({ cwd: NODE_EXAMPLE, adapters: TEST_ADAPTERS });
 
         assert.deepEqual(result.detectedProjectTypes, ["node"]);
         assert.ok(issueIds(result).includes("no-lockfile"));

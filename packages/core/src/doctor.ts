@@ -3,7 +3,7 @@ import { createRepoContext } from "./scan.js";
 import { CategoryScore, CheckCategory, CheckResult, DoctorOptions, DoctorResult, HealthCheck } from "./types.js";
 
 export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResult> {
-    const ctx = await createRepoContext(options.cwd);
+    const ctx = await createRepoContext(options.cwd, { adapters: options.adapters });
 
     const checksToRun: HealthCheck[] = [];
 

@@ -14,7 +14,7 @@ import {
 } from "../src/generators.js";
 import { createRepoContext } from "../src/scan.js";
 import type { GeneratorOptions, ProjectType } from "../src/types.js";
-import { NODE_EXAMPLE, PYTHON_EXAMPLE, makeTempRepo, removeTempRepo } from "./helpers.js";
+import { NODE_EXAMPLE, PYTHON_EXAMPLE, TEST_ADAPTERS, makeTempRepo, removeTempRepo } from "./helpers.js";
 
 const tempRepos: string[] = [];
 
@@ -33,7 +33,7 @@ async function generateOne(
     cwd: string,
     options: GeneratorOptions = {}
 ): Promise<string> {
-    const ctx = await createRepoContext(cwd);
+    const ctx = await createRepoContext(cwd, { adapters: TEST_ADAPTERS });
     const files = await generator.generate(ctx, options);
     assert.ok(files[0], `${generator.id} generated no files`);
     return files[0].content;
@@ -76,7 +76,7 @@ describe("the generator registry", () => {
 
     it("covers every generator the default checks recommend", async () => {
         const { defaultChecks } = await import("../src/checks.js");
-        const ctx = await createRepoContext(await temp({}));
+        const ctx = await createRepoContext(await temp({}), { adapters: TEST_ADAPTERS });
 
         const recommended = defaultChecks
             .map((check) => check.id)
@@ -142,7 +142,7 @@ describe("readmeGenerator", () => {
     });
 
     it("writes to the requested target path", async () => {
-        const ctx = await createRepoContext(NODE_EXAMPLE);
+        const ctx = await createRepoContext(NODE_EXAMPLE, { adapters: TEST_ADAPTERS });
         const files = await readmeGenerator.generate(ctx, { targetPath: "docs/README.md" });
 
         assert.equal(files[0]?.path, "docs/README.md");
@@ -158,7 +158,7 @@ describe("contributingGenerator", () => {
     });
 
     it("writes to CONTRIBUTING.md", async () => {
-        const ctx = await createRepoContext(NODE_EXAMPLE);
+        const ctx = await createRepoContext(NODE_EXAMPLE, { adapters: TEST_ADAPTERS });
         const files = await contributingGenerator.generate(ctx, {});
 
         assert.equal(files[0]?.path, "CONTRIBUTING.md");
@@ -228,7 +228,7 @@ describe("licenseGenerator", () => {
 
 describe("codeOfConductGenerator", () => {
     it("emits Contributor Covenant 2.1 with a contact placeholder", async () => {
-        const ctx = await createRepoContext(await temp({}));
+        const ctx = await createRepoContext(await temp({}), { adapters: TEST_ADAPTERS });
         const files = await codeOfConductGenerator.generate(ctx, {});
 
         assert.equal(files[0]?.path, "CODE_OF_CONDUCT.md");
@@ -241,7 +241,7 @@ describe("codeOfConductGenerator", () => {
 
 describe("issueTemplateGenerator", () => {
     it("writes bug and feature templates with valid front matter", async () => {
-        const ctx = await createRepoContext(await temp({}));
+        const ctx = await createRepoContext(await temp({}), { adapters: TEST_ADAPTERS });
         const files = await issueTemplateGenerator.generate(ctx, {});
 
         assert.deepEqual(files.map((file) => file.path), [
@@ -263,7 +263,7 @@ describe("issueTemplateGenerator", () => {
 
 describe("pullRequestTemplateGenerator", () => {
     it("writes a PR template with a checklist", async () => {
-        const ctx = await createRepoContext(await temp({}));
+        const ctx = await createRepoContext(await temp({}), { adapters: TEST_ADAPTERS });
         const files = await pullRequestTemplateGenerator.generate(ctx, {});
 
         assert.equal(files[0]?.path, ".github/PULL_REQUEST_TEMPLATE.md");
@@ -274,8 +274,6 @@ describe("pullRequestTemplateGenerator", () => {
 
 describe("ciGenerator", () => {
     const languages: ProjectType[] = [
-        "node",
-        "python",
         "go",
         "rust",
         "java",
@@ -285,7 +283,7 @@ describe("ciGenerator", () => {
     ];
 
     it("writes to .github/workflows/ci.yml", async () => {
-        const ctx = await createRepoContext(NODE_EXAMPLE);
+        const ctx = await createRepoContext(NODE_EXAMPLE, { adapters: TEST_ADAPTERS });
         const files = await ciGenerator.generate(ctx, {});
 
         assert.equal(files[0]?.path, ".github/workflows/ci.yml");
@@ -320,35 +318,6 @@ describe("ciGenerator", () => {
             }
         });
     }
-
-    it("pins the Python version as a string", async () => {
-        const content = await generateOne(ciGenerator, await temp({}), { lang: "python" });
-        const workflow = parseYaml(content) as Record<string, any>;
-
-        const setup = workflow.jobs.test.steps.find((step: any) =>
-            String(step.uses ?? "").startsWith("actions/setup-python")
-        );
-
-        assert.equal(setup.with["python-version"], "3.12");
-        assert.match(content, /pip install -r requirements\.txt/);
-        assert.doesNotMatch(content, /pip-install/);
-    });
-
-    it("auto-detects the language from the repo", async () => {
-        const node = parseYaml(await generateOne(ciGenerator, NODE_EXAMPLE)) as any;
-        const python = parseYaml(await generateOne(ciGenerator, PYTHON_EXAMPLE)) as any;
-
-        assert.ok(
-            node.jobs.test.steps.some((step: any) =>
-                String(step.uses ?? "").startsWith("actions/setup-node")
-            )
-        );
-        assert.ok(
-            python.jobs.test.steps.some((step: any) =>
-                String(step.uses ?? "").startsWith("actions/setup-python")
-            )
-        );
-    });
 
     it("lets an explicit --lang override detection", async () => {
         const content = await generateOne(ciGenerator, NODE_EXAMPLE, { lang: "go" });

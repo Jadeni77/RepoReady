@@ -1,3 +1,5 @@
+import { resolvePrimaryAdapter } from "./adapters.js";
+import { genericAdapter } from "./builtin-adapters.js";
 import { buildLicense } from "./licenses.js";
 import { readGitUserName } from "./fs.js";
 import { GeneratorOptions, ProjectType, RepoContext, RepoGenerator } from "./types.js";
@@ -33,6 +35,7 @@ export const readmeGenerator: RepoGenerator = {
     async generate(ctx, options) {
         const projectName = await detectProjectName(ctx);
         const description = await detectProjectDescription(ctx);
+        const commands = primaryCommands(ctx);
 
         const outputPath =
             options.targetPath ??
@@ -45,6 +48,8 @@ export const readmeGenerator: RepoGenerator = {
                 content: buildReadme({
                     projectName,
                     description,
+                    install: commands.install,
+                    test: commands.test,
                     projectTypes: ctx.projectTypes
                 })
             }
@@ -62,7 +67,7 @@ export const contributingGenerator: RepoGenerator = {
         return [
             {
                 path: "CONTRIBUTING.md",
-                content: buildContributing(ctx.projectTypes)
+                content: buildContributing(primaryCommands(ctx))
             }
         ];
     }
@@ -150,12 +155,13 @@ export const ciGenerator: RepoGenerator = {
     description: "Generate a GitHub Actions CI workflow.",
 
     async generate(ctx, options) {
-        const lang = resolveCiLanguage(ctx, options);
+        const adapter = resolvePrimaryAdapter(ctx.adapters, ctx.detected, options.lang ?? "auto");
+        const ciSteps = adapter?.ciSteps ?? genericAdapter.ciSteps!;
 
         return [
             {
                 path: ".github/workflows/ci.yml",
-                content: buildCiWorkflow(lang)
+                content: buildCiWorkflow(ciSteps)
             }
         ];
     }
@@ -217,43 +223,21 @@ async function detectAuthor(ctx: RepoContext, options: GeneratorOptions): Promis
     return (await readGitUserName(ctx.root)) ?? (await detectProjectName(ctx));
 }
 
-function resolveCiLanguage(ctx: RepoContext, options: GeneratorOptions): ProjectType {
-    if (options.lang && options.lang !== "auto") {
-        return options.lang;
-    }
-
-    if (ctx.projectTypes.includes("node")) return "node";
-    if (ctx.projectTypes.includes("python")) return "python";
-    if (ctx.projectTypes.includes("go")) return "go";
-    if (ctx.projectTypes.includes("rust")) return "rust";
-
-    return "generic";
-}
-
 /** Shell snippets shown in generated docs, keyed by the repo's primary language. */
-function installCommand(projectTypes: ProjectType[]): string {
-    if (projectTypes.includes("node")) return "npm install";
-    if (projectTypes.includes("python")) return "pip install -r requirements.txt";
-    if (projectTypes.includes("go")) return "go mod download";
-    if (projectTypes.includes("rust")) return "cargo build";
-    if (projectTypes.includes("ruby")) return "bundle install";
-    if (projectTypes.includes("php")) return "composer install";
-    return "# Install dependencies with this project's package manager";
-}
+function primaryCommands(ctx: RepoContext): { install: string; test: string } {
+    const adapter = resolvePrimaryAdapter(ctx.adapters, ctx.detected, "auto");
 
-function testCommand(projectTypes: ProjectType[]): string {
-    if (projectTypes.includes("node")) return "npm test";
-    if (projectTypes.includes("python")) return "pytest";
-    if (projectTypes.includes("go")) return "go test ./...";
-    if (projectTypes.includes("rust")) return "cargo test";
-    if (projectTypes.includes("ruby")) return "bundle exec rspec";
-    if (projectTypes.includes("php")) return "composer test";
-    return "# Run this project's test suite";
+    return {
+        install: adapter?.installCommand ?? genericAdapter.installCommand!,
+        test: adapter?.testCommand ?? genericAdapter.testCommand!
+    };
 }
 
 function buildReadme(input: {
     projectName: string;
     description: string;
+    install: string;
+    test: string;
     projectTypes: ProjectType[];
 }): string {
     return `# ${input.projectName}
@@ -279,7 +263,7 @@ cd ${input.projectName}
 Install dependencies:
 
 \`\`\`bash
-${installCommand(input.projectTypes)}
+${input.install}
 \`\`\`
 
 ## Usage
@@ -291,7 +275,7 @@ Add usage instructions here.
 Run the test suite before submitting changes.
 
 \`\`\`bash
-${testCommand(input.projectTypes)}
+${input.test}
 \`\`\`
 
 ## Contributing
@@ -304,7 +288,7 @@ See [LICENSE](./LICENSE).
 `;
 }
 
-function buildContributing(projectTypes: ProjectType[]): string {
+function buildContributing(commands: { install: string; test: string }): string {
     return `# Contributing
 
 Thanks for your interest in contributing.
@@ -322,13 +306,13 @@ Thanks for your interest in contributing.
 Install dependencies:
 
 \`\`\`bash
-${installCommand(projectTypes)}
+${commands.install}
 \`\`\`
 
 Before submitting a pull request, run the project checks locally:
 
 \`\`\`bash
-${testCommand(projectTypes)}
+${commands.test}
 \`\`\`
 
 ## Pull request guidelines
@@ -581,7 +565,7 @@ https://www.contributor-covenant.org/translations.
 `;
 }
 
-function buildCiWorkflow(lang: ProjectType): string {
+function buildCiWorkflow(ciSteps: string): string {
     return `name: CI
 
 on:
@@ -597,100 +581,5 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-${buildCiSteps(lang)}`;
-}
-
-function buildCiSteps(lang: ProjectType): string {
-    if (lang === "node") {
-        return `      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npm test
-`;
-    }
-
-    if (lang === "python") {
-        return `      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Run tests
-        run: pytest
-`;
-    }
-
-    if (lang === "go") {
-        return `      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Run tests
-        run: go test ./...
-`;
-    }
-
-    if (lang === "rust") {
-        return `      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Run tests
-        run: cargo test
-`;
-    }
-
-    if (lang === "ruby") {
-        return `      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-
-      - name: Run tests
-        run: bundle exec rake
-`;
-    }
-
-    if (lang === "php") {
-        return `      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
-
-      - name: Run tests
-        run: composer test
-`;
-    }
-
-    if (lang === "java") {
-        return `      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Run tests
-        run: mvn --batch-mode test
-`;
-    }
-
-    return `      - name: Placeholder check
-        run: echo "Add project-specific CI steps here."
-`;
+${ciSteps}`;
 }

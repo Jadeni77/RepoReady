@@ -4,6 +4,7 @@ import { after, describe, it } from "node:test";
 import { applyPlan, describeFiles, planGenerator, runGenerator } from "../src/generator-runner.js";
 import { contributingGenerator, issueTemplateGenerator, readmeGenerator } from "../src/generators.js";
 import {
+    TEST_ADAPTERS,
     makeTempRepo,
     readRepoFile,
     removeTempRepo,
@@ -24,7 +25,10 @@ describe("planGenerator", () => {
     }
 
     it("plans a create for a file that does not exist", async () => {
-        const plan = await planGenerator(contributingGenerator, { cwd: await temp({}) });
+        const plan = await planGenerator(contributingGenerator, {
+            cwd: await temp({}),
+            adapters: TEST_ADAPTERS
+        });
 
         assert.equal(plan.files.length, 1);
         assert.equal(plan.files[0]?.action, "create");
@@ -33,7 +37,8 @@ describe("planGenerator", () => {
 
     it("plans a skip when the file exists and --force was not passed", async () => {
         const plan = await planGenerator(contributingGenerator, {
-            cwd: await temp({ "CONTRIBUTING.md": "mine" })
+            cwd: await temp({ "CONTRIBUTING.md": "mine" }),
+            adapters: TEST_ADAPTERS
         });
 
         assert.equal(plan.files[0]?.action, "skip");
@@ -44,7 +49,8 @@ describe("planGenerator", () => {
     it("plans an overwrite when --force is passed", async () => {
         const plan = await planGenerator(contributingGenerator, {
             cwd: await temp({ "CONTRIBUTING.md": "mine" }),
-            force: true
+            force: true,
+            adapters: TEST_ADAPTERS
         });
 
         assert.equal(plan.files[0]?.action, "overwrite");
@@ -53,13 +59,16 @@ describe("planGenerator", () => {
 
     it("writes nothing", async () => {
         const root = await temp({});
-        await planGenerator(contributingGenerator, { cwd: root });
+        await planGenerator(contributingGenerator, { cwd: root, adapters: TEST_ADAPTERS });
 
         assert.equal(await repoFileExists(root, "CONTRIBUTING.md"), false);
     });
 
     it("plans every file a multi-file generator emits", async () => {
-        const plan = await planGenerator(issueTemplateGenerator, { cwd: await temp({}) });
+        const plan = await planGenerator(issueTemplateGenerator, {
+            cwd: await temp({}),
+            adapters: TEST_ADAPTERS
+        });
 
         assert.equal(plan.files.length, 2);
         assert.ok(plan.files.every((file) => file.action === "create"));
@@ -81,7 +90,11 @@ describe("runGenerator", () => {
 
     it("creates the file and reports the action", async () => {
         const root = await temp({});
-        const result = await runGenerator(contributingGenerator, { cwd: root, yes: true });
+        const result = await runGenerator(contributingGenerator, {
+            cwd: root,
+            yes: true,
+            adapters: TEST_ADAPTERS
+        });
 
         assert.equal(result.dryRun, false);
         assert.equal(result.files[0]?.action, "create");
@@ -90,7 +103,7 @@ describe("runGenerator", () => {
 
     it("creates nested directories as needed", async () => {
         const root = await temp({});
-        await runGenerator(issueTemplateGenerator, { cwd: root, yes: true });
+        await runGenerator(issueTemplateGenerator, { cwd: root, yes: true, adapters: TEST_ADAPTERS });
 
         assert.equal(
             await repoFileExists(root, ".github/ISSUE_TEMPLATE/bug_report.md"),
@@ -107,7 +120,8 @@ describe("runGenerator", () => {
             const root = await temp({});
             const result = await runGenerator(contributingGenerator, {
                 cwd: root,
-                dryRun: true
+                dryRun: true,
+                adapters: TEST_ADAPTERS
             });
 
             assert.equal(result.dryRun, true);
@@ -117,7 +131,8 @@ describe("runGenerator", () => {
         it("returns the content so it can be previewed", async () => {
             const result = await runGenerator(contributingGenerator, {
                 cwd: await temp({}),
-                dryRun: true
+                dryRun: true,
+                adapters: TEST_ADAPTERS
             });
 
             assert.match(result.files[0]?.content ?? "", /^# Contributing/);
@@ -126,7 +141,8 @@ describe("runGenerator", () => {
         it("still reports what would be skipped", async () => {
             const result = await runGenerator(contributingGenerator, {
                 cwd: await temp({ "CONTRIBUTING.md": "mine" }),
-                dryRun: true
+                dryRun: true,
+                adapters: TEST_ADAPTERS
             });
 
             assert.equal(result.files[0]?.action, "skip");
@@ -136,7 +152,11 @@ describe("runGenerator", () => {
     describe("overwrite safety", () => {
         it("leaves an existing file untouched without --force", async () => {
             const root = await temp({ "CONTRIBUTING.md": "do not clobber me" });
-            const result = await runGenerator(contributingGenerator, { cwd: root, yes: true });
+            const result = await runGenerator(contributingGenerator, {
+                cwd: root,
+                yes: true,
+                adapters: TEST_ADAPTERS
+            });
 
             assert.equal(result.files[0]?.action, "skip");
             assert.equal(await readRepoFile(root, "CONTRIBUTING.md"), "do not clobber me");
@@ -147,7 +167,8 @@ describe("runGenerator", () => {
             const result = await runGenerator(contributingGenerator, {
                 cwd: root,
                 force: true,
-                yes: true
+                yes: true,
+                adapters: TEST_ADAPTERS
             });
 
             assert.equal(result.files[0]?.action, "overwrite");
@@ -163,7 +184,8 @@ describe("runGenerator", () => {
         const result = await runGenerator(readmeGenerator, {
             cwd: root,
             force: true,
-            yes: true
+            yes: true,
+            adapters: TEST_ADAPTERS
         });
 
         assert.equal(result.files[0]?.path, "readme.md");
@@ -185,7 +207,10 @@ describe("applyPlan", () => {
         const root = await makeTempRepo({ "CONTRIBUTING.md": "mine" });
         tempRepos.push(root);
 
-        const plan = await planGenerator(contributingGenerator, { cwd: root });
+        const plan = await planGenerator(contributingGenerator, {
+            cwd: root,
+            adapters: TEST_ADAPTERS
+        });
         const results = await applyPlan(plan);
 
         assert.equal(results[0]?.action, "skip");

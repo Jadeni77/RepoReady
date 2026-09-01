@@ -27,7 +27,7 @@ export async function planGenerator(
     options: GeneratorOptions = {},
     context?: RepoContext
 ): Promise<GeneratorPlan> {
-    const ctx = context ?? (await createRepoContext(options.cwd));
+    const ctx = context ?? (await createRepoContext(options.cwd, { adapters: options.adapters }));
     const files = await generator.generate(ctx, options);
 
     const planned: PlannedFile[] = [];
@@ -88,7 +88,7 @@ export async function runGenerator(
     generator: RepoGenerator,
     options: GeneratorOptions = {}
 ): Promise<GeneratorResult> {
-    const ctx = await createRepoContext(options.cwd);
+    const ctx = await createRepoContext(options.cwd, { adapters: options.adapters });
     const plan = await planGenerator(generator, options, ctx);
 
     const base = {

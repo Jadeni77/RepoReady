@@ -57,7 +57,7 @@ const UPDATE_TOOL_CONFIGS = [
  * disk and names the tool to run next.
  */
 export async function checkDependencies(options: DepCheckOptions = {}): Promise<DepCheckResult> {
-    const ctx = await createRepoContext(options.cwd);
+    const ctx = await createRepoContext(options.cwd, { adapters: options.adapters });
 
     const manifests = await filterExisting(ctx, MANIFESTS);
     const lockfiles = await filterExisting(ctx, LOCKFILES);
