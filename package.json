@@ -9,6 +9,7 @@
         "dev": "npm run build -w @repoready/core && npm run dev -w @repoready/cli --",
         "doctor": "npm run dev -- doctor",
         "typecheck": "tsc -p tsconfig.base.json --noEmit",
+        "pretest": "npm run build --workspaces --if-present",
         "test": "node --import tsx --test \"packages/*/test/*.test.ts\"",
         "check": "npm run typecheck && npm test"
     },
