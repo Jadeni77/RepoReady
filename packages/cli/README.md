@@ -6,14 +6,14 @@ Scans a repository, scores how prepared it is for public release, tells you
 what's missing, and generates it.
 
 ```bash
-npx @repoready/cli doctor
-npx @repoready/cli fix --yes
+npx repoready-cli doctor
+npx repoready-cli fix --yes
 ```
 
 Or install it:
 
 ```bash
-npm install -g @repoready/cli
+npm install -g repoready-cli
 repoready doctor
 ```
 

@@ -1,10 +1,10 @@
 {
-    "name": "@repoready/cli",
+    "name": "repoready-cli",
     "version": "0.1.0",
     "description": "Scan a repository, score how open-source-ready it is, and generate what's missing.",
     "type": "module",
     "bin": {
-        "repoready": "./dist/index.js"
+        "repoready": "dist/index.js"
     },
     "files": [
         "dist",
