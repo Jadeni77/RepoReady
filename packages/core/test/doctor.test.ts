@@ -131,6 +131,53 @@ describe("runDoctor", () => {
         });
     });
 
+    describe("the issue template check", () => {
+        it("passes when the directory holds templates", async () => {
+            const result = await runDoctor({
+                cwd: await temp({ ".github/ISSUE_TEMPLATE/bug_report.md": "# Bug" }),
+                adapters: TEST_ADAPTERS
+            });
+
+            const check = result.results.find((c) => c.id === "issue-template");
+
+            assert.equal(check?.status, "pass");
+            assert.deepEqual(check?.details?.templates, ["bug_report.md"]);
+        });
+
+        it("passes for the single-file .github/ISSUE_TEMPLATE.md form", async () => {
+            const result = await runDoctor({
+                cwd: await temp({ ".github/ISSUE_TEMPLATE.md": "# Issue" }),
+                adapters: TEST_ADAPTERS
+            });
+
+            assert.equal(
+                result.results.find((c) => c.id === "issue-template")?.status,
+                "pass"
+            );
+        });
+
+        // Regression: the directory merely existing used to pass, so a repo
+        // with an empty ISSUE_TEMPLATE/ scored as though it had templates and
+        // `fix` never generated any.
+        it("warns when the directory exists but is empty", async () => {
+            const root = await temp({ ".github/ISSUE_TEMPLATE/.keep": "" });
+            const result = await runDoctor({ cwd: root, adapters: TEST_ADAPTERS });
+            const check = result.results.find((c) => c.id === "issue-template");
+
+            assert.equal(check?.status, "warn");
+            assert.match(check?.summary ?? "", /contains no templates/);
+        });
+
+        it("warns when there is no issue template at all", async () => {
+            const result = await runDoctor({ cwd: await temp({}), adapters: TEST_ADAPTERS });
+
+            assert.equal(
+                result.results.find((c) => c.id === "issue-template")?.status,
+                "warn"
+            );
+        });
+    });
+
     describe("the tests check", () => {
         it("passes on a real npm test script", async () => {
             const result = await runDoctor({

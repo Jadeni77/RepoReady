@@ -56,7 +56,7 @@ describe("nodeAdapter", () => {
         const steps = workflow.jobs.test.steps;
 
         assert.ok(steps.some((s: any) => String(s.uses ?? "").startsWith("actions/setup-node")));
-        assert.equal(steps.find((s: any) => s.uses?.startsWith("actions/setup-node")).with["node-version"], 20);
+        assert.equal(steps.find((s: any) => s.uses?.startsWith("actions/setup-node")).with["node-version"], 22);
     });
 });
 
@@ -173,6 +173,33 @@ describe("adapter checks", () => {
         const root = await temp({ "tsconfig.json": JSON.stringify({ compilerOptions: { strict: false } }) });
 
         assert.equal((await runCheck("ts-strict", root))?.status, "warn");
+    });
+
+    // Regression: reading only tsconfig.json reported strict mode as off for
+    // monorepos that keep the setting in a base config.
+    it("ts-strict finds strict in tsconfig.base.json", async () => {
+        const root = await temp({
+            "tsconfig.base.json": JSON.stringify({ compilerOptions: { strict: true } })
+        });
+
+        assert.equal((await runCheck("ts-strict", root))?.status, "pass");
+    });
+
+    it("ts-strict follows extends one level", async () => {
+        const root = await temp({
+            "tsconfig.json": JSON.stringify({ extends: "./tsconfig.base.json" }),
+            "tsconfig.base.json": JSON.stringify({ compilerOptions: { strict: true } })
+        });
+
+        assert.equal((await runCheck("ts-strict", root))?.status, "pass");
+    });
+
+    it("ts-strict warns when no config declares strict at all", async () => {
+        const root = await temp({ "tsconfig.json": JSON.stringify({ compilerOptions: {} }) });
+        const check = await runCheck("ts-strict", root);
+
+        assert.equal(check?.status, "warn");
+        assert.match(check?.summary ?? "", /No TypeScript config declares a strict setting/);
     });
 
     it("node-engines passes when engines.node is declared", async () => {
