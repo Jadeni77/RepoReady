@@ -38,7 +38,7 @@ To get a bare `repoready` on your `PATH` (usable outside this repo without
 `npx`), link the CLI package:
 
 ```bash
-npm link -w @repoready/cli
+npm link -w repoready-cli
 ```
 
 That writes into npm's global prefix, which on a default macOS install is
@@ -48,16 +48,16 @@ first:
 ```bash
 npm config set prefix ~/.npm-global
 export PATH="$HOME/.npm-global/bin:$PATH"   # add to your shell profile
-npm link -w @repoready/cli
+npm link -w repoready-cli
 ```
 
-Undo with `npm unlink -g @repoready/cli`. Either way `repoready` runs the build
+Undo with `npm unlink -g repoready-cli`. Either way `repoready` runs the build
 in your working tree, so re-run `npm run build` after changing source.
 
 To run straight from source with no build step:
 
 ```bash
-npm run dev -w @repoready/cli -- doctor
+npm run dev -w repoready-cli -- doctor
 ```
 
 ## Commands
@@ -277,7 +277,7 @@ This is an npm-workspaces monorepo:
 | Package | Description |
 | --- | --- |
 | [`@repoready/core`](packages/core) | Repo scanning, health checks, scoring, generators, and output formatting. Defines the `LanguageAdapter` interface, plus data-only adapters for Go, Rust, Java, Ruby, PHP, and the generic fallback. |
-| [`@repoready/cli`](packages/cli) | Commander-based CLI that exposes the `repoready` command. |
+| [`repoready-cli`](packages/cli) | Commander-based CLI that exposes the `repoready` command. |
 | [`@repoready/plugin-node`](packages/plugin-node) | Node and TypeScript adapters (`node-engines`, `node-publish-files`, `ts-strict`). |
 | [`@repoready/plugin-python`](packages/plugin-python) | Python adapter (`python-pyproject`, `python-lint-config`). |
 | [`@repoready/plugin-github`](packages/plugin-github) | Universal GitHub hygiene adapter (`security-policy`) and the external-tool generators behind `init-security`, `init-dependabot`, `init-scorecard`, and `init-release`. |
@@ -300,7 +300,7 @@ npm run build                              # build all packages
 npm run typecheck                          # type-check the whole monorepo
 npm test                                   # run the test suite
 npm run check                              # typecheck + test
-npm run dev -w @repoready/cli -- doctor    # run the CLI from source
+npm run dev -w repoready-cli -- doctor    # run the CLI from source
 ```
 
 Tests use the built-in `node:test` runner via `tsx`, so there is no test
