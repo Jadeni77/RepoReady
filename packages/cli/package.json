@@ -1,23 +1,55 @@
 {
     "name": "@repoready/cli",
-    "version": "0.0.1",
-    "description": "A repo-readiness CLI for making projects open-source-ready",
+    "version": "0.1.0",
+    "description": "Scan a repository, score how open-source-ready it is, and generate what's missing.",
     "type": "module",
     "bin": {
         "repoready": "./dist/index.js"
     },
     "files": [
-        "dist"
+        "dist",
+        "README.md",
+        "LICENSE"
     ],
     "scripts": {
         "dev": "tsx src/index.ts",
-        "build": "tsup src/index.ts --format esm --dts"
+        "build": "tsup src/index.ts --format esm --dts",
+        "prepublishOnly": "npm run build -w @repoready/core && npm run build"
     },
     "dependencies": {
-        "@repoready/core": "0.0.1",
-        "@repoready/plugin-github": "0.0.1",
-        "@repoready/plugin-node": "0.0.1",
-        "@repoready/plugin-python": "0.0.1",
         "commander": "^12.0.0"
+    },
+    "keywords": [
+        "open-source",
+        "repository",
+        "linter",
+        "scaffolding",
+        "github",
+        "cli",
+        "readme",
+        "license",
+        "dependabot"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/Jadeni77/RepoReady#readme",
+    "bugs": {
+        "url": "https://github.com/Jadeni77/RepoReady/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Jadeni77/RepoReady.git",
+        "directory": "packages/cli"
+    },
+    "engines": {
+        "node": ">=22"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "devDependencies": {
+        "@repoready/core": "0.1.0",
+        "@repoready/plugin-github": "0.1.0",
+        "@repoready/plugin-node": "0.1.0",
+        "@repoready/plugin-python": "0.1.0"
     }
 }

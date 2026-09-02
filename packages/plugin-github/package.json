@@ -1,6 +1,6 @@
 {
     "name": "@repoready/plugin-github",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "type": "module",
     "main": "./dist/index.cjs",
     "module": "./dist/index.js",
@@ -17,5 +17,7 @@
     },
     "dependencies": {
         "@repoready/core": "0.0.1"
-    }
+    },
+    "private": true,
+    "license": "MIT"
 }

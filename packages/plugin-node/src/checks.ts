@@ -8,8 +8,40 @@ type PackageJson = {
 };
 
 type TsConfig = {
+    extends?: string;
     compilerOptions?: { strict?: boolean };
 };
+
+/**
+ * Where a repo's TypeScript config actually lives. Monorepos routinely keep
+ * the real settings in a base file that per-package configs extend, so
+ * reading only tsconfig.json reports strict mode as off for a repo that has
+ * it on.
+ */
+const TSCONFIG_CANDIDATES = ["tsconfig.json", "tsconfig.base.json"];
+
+/** Resolves `extends` one level, which covers the usual base-config layout. */
+async function readStrict(ctx: RepoContext): Promise<boolean | null> {
+    for (const candidate of TSCONFIG_CANDIDATES) {
+        const config = await ctx.readJson<TsConfig>(candidate);
+        if (!config) continue;
+
+        if (typeof config.compilerOptions?.strict === "boolean") {
+            return config.compilerOptions.strict;
+        }
+
+        if (config.extends) {
+            const base = await ctx.readJson<TsConfig>(
+                config.extends.replace(/^\.\//, "")
+            );
+            if (typeof base?.compilerOptions?.strict === "boolean") {
+                return base.compilerOptions.strict;
+            }
+        }
+    }
+
+    return null;
+}
 
 function result(
     check: HealthCheck,
@@ -36,16 +68,25 @@ export const tsStrictCheck: HealthCheck = {
     points: 5,
 
     async run(ctx) {
-        const tsconfig = await ctx.readJson<TsConfig>("tsconfig.json");
+        const strict = await readStrict(ctx);
 
-        if (tsconfig?.compilerOptions?.strict === true) {
-            return result(tsStrictCheck, "pass", "tsconfig.json enables strict mode.");
+        if (strict === true) {
+            return result(tsStrictCheck, "pass", "TypeScript strict mode is enabled.");
+        }
+
+        if (strict === false) {
+            return result(
+                tsStrictCheck,
+                "warn",
+                "TypeScript strict mode is disabled.",
+                "Set \"strict\": true in compilerOptions to catch more bugs at compile time."
+            );
         }
 
         return result(
             tsStrictCheck,
             "warn",
-            "tsconfig.json does not enable strict mode.",
+            "No TypeScript config declares a strict setting.",
             "Set \"strict\": true in compilerOptions to catch more bugs at compile time."
         );
     }

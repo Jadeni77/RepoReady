@@ -85,7 +85,7 @@ export const testNodeAdapter: LanguageAdapter = {
     ciSteps: `      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies

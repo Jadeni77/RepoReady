@@ -1,6 +1,6 @@
 {
     "name": "@repoready/core",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "type": "module",
     "main": "./dist/index.cjs",
     "module": "./dist/index.js",
@@ -14,5 +14,7 @@
     },
     "scripts": {
         "build": "tsup src/index.ts --format esm,cjs --dts"
-    }
+    },
+    "private": true,
+    "license": "MIT"
 }

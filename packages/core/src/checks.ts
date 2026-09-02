@@ -128,17 +128,52 @@ const codeOfConductCheck = makeFileCheck({
     fixedBy: "code-of-conduct"
 })
 
-const issueTemplateCheck = makeFileCheck({
+const issueTemplateCheck: HealthCheck = {
     id: "issue-template",
     name: "Issue Template",
     category: "community",
     points: 5,
-    paths: [".github/ISSUE_TEMPLATE.md", ".github/ISSUE_TEMPLATE"],
-    missingStatus: "warn",
-    missingSummary: "No issue template found.",
-    recommendation: "Run repoready init-issues.",
-    fixedBy: "issues"
-})
+    fixedBy: "issues",
+
+    async run(ctx) {
+        if (await ctx.has(".github/ISSUE_TEMPLATE.md")) {
+            return makeResult(issueTemplateCheck, "pass", ".github/ISSUE_TEMPLATE.md found.");
+        }
+
+        // An empty ISSUE_TEMPLATE directory offers contributors nothing, so
+        // the directory existing is not enough — it has to hold templates.
+        const templates = (await ctx.listDir(".github/ISSUE_TEMPLATE")).filter(
+            (entry) => entry.endsWith(".md") || entry.endsWith(".yml") || entry.endsWith(".yaml")
+        );
+
+        if (templates.length > 0) {
+            return makeResult(
+                issueTemplateCheck,
+                "pass",
+                `Found ${templates.length} issue template(s).`,
+                undefined,
+                undefined,
+                { templates }
+            );
+        }
+
+        if (await ctx.has(".github/ISSUE_TEMPLATE")) {
+            return makeResult(
+                issueTemplateCheck,
+                "warn",
+                ".github/ISSUE_TEMPLATE exists but contains no templates.",
+                "Run repoready init-issues."
+            );
+        }
+
+        return makeResult(
+            issueTemplateCheck,
+            "warn",
+            "No issue template found.",
+            "Run repoready init-issues."
+        );
+    }
+};
 
 const pullRequestCheck = makeFileCheck({
     id: "pr-template",

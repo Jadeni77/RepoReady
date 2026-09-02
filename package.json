@@ -5,12 +5,12 @@
         "packages/*"
     ],
     "scripts": {
-        "build": "npm run build --workspaces",
+        "build": "npm run build -w @repoready/core && npm run build -w @repoready/plugin-node && npm run build -w @repoready/plugin-python && npm run build -w @repoready/plugin-github && npm run build -w @repoready/cli",
         "dev": "npm run build -w @repoready/core && npm run dev -w @repoready/cli --",
         "doctor": "npm run dev -- doctor",
-        "pretypecheck": "npm run build --workspaces --if-present",
+        "pretypecheck": "npm run build",
         "typecheck": "tsc -p tsconfig.base.json --noEmit",
-        "pretest": "npm run build --workspaces --if-present",
+        "pretest": "npm run build",
         "test": "node --import tsx --test \"packages/*/test/*.test.ts\"",
         "check": "npm run typecheck && npm test"
     },
@@ -20,5 +20,8 @@
         "tsx": "^4.0.0",
         "typescript": "^5.0.0",
         "yaml": "^2.9.0"
+    },
+    "engines": {
+        "node": ">=22"
     }
 }
