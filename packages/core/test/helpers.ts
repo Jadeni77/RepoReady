@@ -54,7 +54,7 @@ export async function repoFileExists(root: string, relativePath: string): Promis
 /** A repo that satisfies every default check, for score-ceiling assertions. */
 export const PERFECT_REPO: Record<string, string> = {
     "README.md": "# Perfect\n",
-    "LICENSE": "MIT License\n",
+    "LICENSE": "MIT License\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\n",
     "CONTRIBUTING.md": "# Contributing\n",
     "CODE_OF_CONDUCT.md": "# Code of Conduct\n",
     ".github/ISSUE_TEMPLATE/bug_report.md": "# Bug\n",

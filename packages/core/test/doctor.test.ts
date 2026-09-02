@@ -131,6 +131,76 @@ describe("runDoctor", () => {
         });
     });
 
+    describe("the license check", () => {
+        it("identifies which license the file contains", async () => {
+            const result = await runDoctor({
+                cwd: await temp({ "LICENSE": "MIT License\n\nPermission is hereby granted, free of charge, to any person" }),
+                adapters: TEST_ADAPTERS
+            });
+
+            const check = result.results.find((c) => c.id === "license");
+
+            assert.equal(check?.status, "pass");
+            assert.equal(check?.details?.license, "MIT License");
+        });
+
+        it("recognises other common licenses", async () => {
+            const cases: [string, string][] = [
+                ["Apache License, Version 2.0", "Apache License 2.0"],
+                ["GNU GENERAL PUBLIC LICENSE Version 3", "GNU General Public License"],
+                ["GNU AFFERO GENERAL PUBLIC LICENSE", "GNU Affero General Public License"],
+                ["Permission to use, copy, modify, and/or distribute this software", "ISC License"],
+                ["Redistribution and use in source and binary forms", "BSD License"]
+            ];
+
+            for (const [text, expected] of cases) {
+                const result = await runDoctor({
+                    cwd: await temp({ "LICENSE": text }),
+                    adapters: TEST_ADAPTERS
+                });
+
+                assert.equal(
+                    result.results.find((c) => c.id === "license")?.details?.license,
+                    expected,
+                    `expected ${expected} for ${JSON.stringify(text.slice(0, 30))}`
+                );
+            }
+        });
+
+        // Regression: existence alone used to pass, so an empty LICENSE
+        // scored 10/10 while GitHub detected no license and the project
+        // remained all rights reserved.
+        it("fails an empty license file", async () => {
+            const result = await runDoctor({
+                cwd: await temp({ "LICENSE": "" }),
+                adapters: TEST_ADAPTERS
+            });
+
+            const check = result.results.find((c) => c.id === "license");
+
+            assert.equal(check?.status, "fail");
+            assert.match(check?.summary ?? "", /all rights reserved/);
+        });
+
+        it("warns when the file is not a recognisable license", async () => {
+            const result = await runDoctor({
+                cwd: await temp({ "LICENSE": "do whatever you want i guess" }),
+                adapters: TEST_ADAPTERS
+            });
+
+            const check = result.results.find((c) => c.id === "license");
+
+            assert.equal(check?.status, "warn");
+            assert.match(check?.summary ?? "", /does not match a known/);
+        });
+
+        it("fails when there is no license file", async () => {
+            const result = await runDoctor({ cwd: await temp({}), adapters: TEST_ADAPTERS });
+
+            assert.equal(result.results.find((c) => c.id === "license")?.status, "fail");
+        });
+    });
+
     describe("the issue template check", () => {
         it("passes when the directory holds templates", async () => {
             const result = await runDoctor({

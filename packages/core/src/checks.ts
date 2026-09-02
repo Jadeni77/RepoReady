@@ -92,17 +92,81 @@ const readmeCheck = makeFileCheck({
     fixedBy: "readme"
 });
 
-const licenseCheck = makeFileCheck({
+/**
+ * Distinctive phrases from each license's canonical text. GitHub matches the
+ * whole document against the SPDX corpus; a phrase match is a cheap
+ * approximation that is accurate enough to tell a real license from an empty
+ * file, which is the failure this check exists to catch.
+ *
+ * Order matters: AGPL and LGPL name themselves before the plain GPL phrase
+ * would match them.
+ */
+const LICENSE_SIGNATURES: [string, RegExp][] = [
+    ["GNU Affero General Public License", /GNU AFFERO GENERAL PUBLIC LICENSE/i],
+    ["GNU Lesser General Public License", /GNU LESSER GENERAL PUBLIC LICENSE/i],
+    ["GNU General Public License", /GNU GENERAL PUBLIC LICENSE/i],
+    ["Apache License 2.0", /Apache License,?\s+Version 2\.0/i],
+    ["Mozilla Public License 2.0", /Mozilla Public License Version 2\.0/i],
+    ["MIT License", /Permission is hereby granted, free of charge/i],
+    ["ISC License", /Permission to use, copy, modify,? and\/or distribute this software/i],
+    ["BSD License", /Redistribution and use in source and binary forms/i],
+    ["The Unlicense", /This is free and unencumbered software released into the public domain/i],
+    ["Creative Commons", /Creative Commons/i]
+];
+
+const licenseCheck: HealthCheck = {
     id: "license",
     name: "License",
     category: "community",
     points: 10,
-    paths: ["LICENSE", "LICENSE.md", "license.md"],
-    missingStatus: "fail",
-    missingSummary: "No license file found.",
-    recommendation: "Run repoready init-license.",
-    fixedBy: "license"
-})
+    fixedBy: "license",
+
+    async run(ctx) {
+        const path = await hasAny(ctx, ["LICENSE", "LICENSE.md", "LICENSE.txt", "license.md", "COPYING"]);
+
+        if (!path) {
+            return makeResult(
+                licenseCheck,
+                "fail",
+                "No license file found.",
+                "Run repoready init-license."
+            );
+        }
+
+        // A file's existence is not the point — an empty or unrecognised
+        // LICENSE grants nothing, so the repo is still all-rights-reserved
+        // and GitHub will not detect a license either.
+        const text = (await ctx.readText(path)) ?? "";
+        const match = LICENSE_SIGNATURES.find(([, pattern]) => pattern.test(text));
+
+        if (match) {
+            return makeResult(
+                licenseCheck,
+                "pass",
+                `${path} contains the ${match[0]}.`,
+                undefined,
+                undefined,
+                { license: match[0] }
+            );
+        }
+
+        if (text.trim().length === 0) {
+            return makeResult(
+                licenseCheck,
+                "fail",
+                `${path} is empty, so the project is still all rights reserved.`,
+                "Run repoready init-license --force to write a real license."
+            );
+        }
+
+        return makeResult(
+            licenseCheck,
+            "warn",
+            `${path} does not match a known open-source license.`,
+            "Check the text is a full license. GitHub only detects licenses it can match."
+        );
+    }
+};
 
 const contributingCheck = makeFileCheck({
     id: "contributing",
