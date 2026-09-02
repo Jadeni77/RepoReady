@@ -17,6 +17,11 @@ npm install -g repoready-cli
 repoready doctor
 ```
 
+The package is `repoready-cli`; the command it installs is `repoready`.
+
+> **Note:** run `npx repoready-cli`, not `npx repoready`. Without the `-cli`,
+> npx fetches a different, unrelated package of that name.
+
 ## Commands
 
 | Command | Description |
