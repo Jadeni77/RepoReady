@@ -14,7 +14,7 @@
     "scripts": {
         "dev": "tsx src/index.ts",
         "build": "tsup src/index.ts --format esm --dts",
-        "prepublishOnly": "npm run build -w @repoready/core && npm run build"
+        "prepublishOnly": "npm run build -w @repoready/core && npm run build -w @repoready/plugin-node && npm run build -w @repoready/plugin-python && npm run build -w @repoready/plugin-github && npm run build"
     },
     "dependencies": {
         "commander": "^12.0.0"
