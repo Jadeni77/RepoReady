@@ -34,6 +34,18 @@ npx repoready doctor --cwd /path/to/some/other/repo
 `bin` field, so `npx repoready` runs your local build — no publish step and no
 global install. Point it at any directory with `--cwd`.
 
+Published as **`repoready-cli`**; the command it installs is **`repoready`**.
+Outside this repo, install it once and use the command directly:
+
+```bash
+npm install -g repoready-cli
+repoready doctor
+```
+
+Note that `npx repoready` only resolves to this tool inside a project that has
+it installed. Elsewhere, use `npx repoready-cli` — an unrelated package owns
+the bare `repoready` name on npm.
+
 To get a bare `repoready` on your `PATH` (usable outside this repo without
 `npx`), link the CLI package:
 
