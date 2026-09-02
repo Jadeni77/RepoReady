@@ -1,6 +1,6 @@
 {
     "name": "repoready-cli",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Scan a repository, score how open-source-ready it is, and generate what's missing.",
     "type": "module",
     "bin": {
@@ -47,9 +47,9 @@
         "access": "public"
     },
     "devDependencies": {
-        "@repoready/core": "0.1.0",
-        "@repoready/plugin-github": "0.1.0",
-        "@repoready/plugin-node": "0.1.0",
-        "@repoready/plugin-python": "0.1.0"
+        "@repoready/core": "0.1.1",
+        "@repoready/plugin-github": "0.1.1",
+        "@repoready/plugin-node": "0.1.1",
+        "@repoready/plugin-python": "0.1.1"
     }
 }
