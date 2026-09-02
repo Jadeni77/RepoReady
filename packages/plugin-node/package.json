@@ -16,7 +16,7 @@
         "build": "tsup src/index.ts --format esm,cjs --dts"
     },
     "dependencies": {
-        "@repoready/core": "0.0.1"
+        "@repoready/core": "0.1.0"
     },
     "private": true,
     "license": "MIT"
